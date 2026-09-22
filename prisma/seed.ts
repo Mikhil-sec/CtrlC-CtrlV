@@ -9,6 +9,7 @@
  * engine tests assert against.
  */
 
+import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { demoGoals, demoProfile } from "../src/lib/contract/fixtures";
