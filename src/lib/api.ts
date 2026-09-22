@@ -27,13 +27,16 @@ export function fail(status: number, message: string, issues?: unknown): Respons
  *
  * Without this every route repeats the same try/catch, and one that forgets it
  * returns a 500 with an internal message in the body.
+ *
+ * Takes a rest parameter for `context` so it works for both static routes and
+ * dynamic ones, where Next.js passes a second argument holding `params`.
  */
-export function route(
-  handler: (request: Request) => Promise<Response>,
-): (request: Request) => Promise<Response> {
-  return async (request: Request) => {
+export function route<Args extends unknown[]>(
+  handler: (request: Request, ...args: Args) => Promise<Response>,
+): (request: Request, ...args: Args) => Promise<Response> {
+  return async (request: Request, ...args: Args) => {
     try {
-      return await handler(request);
+      return await handler(request, ...args);
     } catch (error) {
       if (error instanceof ZodError) {
         return fail(422, "That request is not valid", error.issues);
