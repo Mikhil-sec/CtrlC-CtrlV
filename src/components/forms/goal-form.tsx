@@ -135,7 +135,7 @@ export function GoalForm({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="goal-priority">
-          Priority <span className="font-normal text-muted">(1 is funded first)</span>
+          Priority <span className="text-muted font-normal">(1 is funded first)</span>
         </Label>
         <Input
           id="goal-priority"

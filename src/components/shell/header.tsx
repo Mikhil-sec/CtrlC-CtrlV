@@ -11,10 +11,10 @@ export function Header() {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
+    <header className="border-border bg-background/85 sticky top-0 z-40 border-b backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+          <span className="bg-accent text-accent-foreground flex size-8 items-center justify-center rounded-lg">
             <Wallet className="size-4" />
           </span>
           GoalPath
@@ -38,11 +38,8 @@ export function Header() {
       </div>
 
       {open && (
-        <div className="border-t border-border px-4 py-3 md:hidden">
-          <NavLinks
-            className="flex flex-col gap-1"
-            onNavigate={() => setOpen(false)}
-          />
+        <div className="border-border border-t px-4 py-3 md:hidden">
+          <NavLinks className="flex flex-col gap-1" onNavigate={() => setOpen(false)} />
         </div>
       )}
     </header>

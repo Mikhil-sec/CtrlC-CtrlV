@@ -30,7 +30,7 @@ export function RequiredVsAllocated({
             <span className="text-muted">{row.label}</span>
             <span className="font-medium tabular-nums">{formatMoney(row.value)}</span>
           </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface">
+          <div className="bg-surface h-2.5 w-full overflow-hidden rounded-full">
             <div
               className={cn("h-full rounded-full", row.tone)}
               style={{ width: `${Math.min(100, (row.value / max) * 100)}%` }}
@@ -39,7 +39,7 @@ export function RequiredVsAllocated({
         </div>
       ))}
       {short && gap > 0 && (
-        <p className="text-sm text-danger">
+        <p className="text-danger text-sm">
           {formatMoney(gap)} short of what this goal needs each month to land on time.
         </p>
       )}

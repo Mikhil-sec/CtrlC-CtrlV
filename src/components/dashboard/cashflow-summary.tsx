@@ -5,8 +5,18 @@ import type { CashflowSummary } from "@/lib/contract/types";
 import { cn } from "@/lib/utils";
 
 const TILES = [
-  { key: "monthlyIncomeMinor", label: "Income", icon: ArrowUpRight, tone: "text-success" },
-  { key: "essentialExpensesMinor", label: "Essentials", icon: Wallet, tone: "text-foreground" },
+  {
+    key: "monthlyIncomeMinor",
+    label: "Income",
+    icon: ArrowUpRight,
+    tone: "text-success",
+  },
+  {
+    key: "essentialExpensesMinor",
+    label: "Essentials",
+    icon: Wallet,
+    tone: "text-foreground",
+  },
   {
     key: "discretionaryExpensesMinor",
     label: "Non-essentials",
@@ -36,8 +46,11 @@ export function CashflowSummaryPanel({ cashflow }: { cashflow: CashflowSummary }
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {TILES.map(({ key, label, icon: Icon, tone }) => (
-            <div key={key} className="flex flex-col gap-1.5 rounded-lg bg-surface p-3.5">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
+            <div
+              key={key}
+              className="bg-surface flex flex-col gap-1.5 rounded-lg p-3.5"
+            >
+              <div className="text-muted flex items-center gap-1.5 text-xs font-medium">
                 <Icon className={cn("size-3.5", tone)} />
                 {label}
               </div>

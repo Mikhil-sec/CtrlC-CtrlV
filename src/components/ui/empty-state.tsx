@@ -17,15 +17,15 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-surface px-6 py-14 text-center",
+        "border-border bg-surface flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-14 text-center",
         className,
       )}
     >
-      <div className="rounded-full bg-accent-soft p-3 text-accent">
+      <div className="bg-accent-soft text-accent rounded-full p-3">
         <Icon className="size-6" />
       </div>
       <h3 className="text-base font-semibold">{title}</h3>
-      <p className="max-w-sm text-sm text-muted">{description}</p>
+      <p className="text-muted max-w-sm text-sm">{description}</p>
       {action}
     </div>
   );
@@ -41,9 +41,9 @@ export function ErrorState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-danger/30 bg-danger-soft px-6 py-14 text-center">
-      <h3 className="text-base font-semibold text-danger">{title}</h3>
-      <p className="max-w-sm text-sm text-danger/80">{description}</p>
+    <div className="border-danger/30 bg-danger-soft flex flex-col items-center gap-3 rounded-xl border px-6 py-14 text-center">
+      <h3 className="text-danger text-base font-semibold">{title}</h3>
+      <p className="text-danger/80 max-w-sm text-sm">{description}</p>
       {action}
     </div>
   );

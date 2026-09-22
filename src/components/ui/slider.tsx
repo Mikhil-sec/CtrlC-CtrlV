@@ -17,8 +17,8 @@ export const Slider = React.forwardRef<HTMLInputElement, SliderProps>(
       ref={ref}
       type="range"
       className={cn(
-        "h-2 w-full cursor-pointer appearance-none rounded-full bg-surface accent-accent",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "bg-surface accent-accent h-2 w-full cursor-pointer appearance-none rounded-full",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
         trackClassName,
         className,
       )}

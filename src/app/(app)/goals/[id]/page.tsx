@@ -42,16 +42,17 @@ export default function GoalDetailPage({
   if (!goal || !projection) {
     return (
       <div className="flex flex-col gap-4">
-        <Link href="/goals" className="flex w-fit items-center gap-1 text-sm text-muted hover:text-foreground">
+        <Link
+          href="/goals"
+          className="text-muted hover:text-foreground flex w-fit items-center gap-1 text-sm"
+        >
           <ArrowLeft className="size-4" /> Back to goals
         </Link>
         <EmptyState
           icon={Target}
           title="Goal not found"
           description="This goal may have been removed. Head back to see what's left."
-          action={
-            <Button onClick={() => router.push("/goals")}>Back to goals</Button>
-          }
+          action={<Button onClick={() => router.push("/goals")}>Back to goals</Button>}
         />
       </div>
     );
@@ -72,7 +73,10 @@ export default function GoalDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/goals" className="flex w-fit items-center gap-1 text-sm text-muted hover:text-foreground">
+      <Link
+        href="/goals"
+        className="text-muted hover:text-foreground flex w-fit items-center gap-1 text-sm"
+      >
         <ArrowLeft className="size-4" /> Back to goals
       </Link>
 
@@ -82,7 +86,7 @@ export default function GoalDetailPage({
             <h1 className="text-2xl font-semibold tracking-tight">{goal.name}</h1>
             <Badge variant={meta.badge}>{meta.label}</Badge>
           </div>
-          <p className="text-sm text-muted">
+          <p className="text-muted text-sm">
             Target {formatMoney(goal.targetMinor)} by{" "}
             {new Date(goal.targetDate).toLocaleDateString("en-GB", {
               day: "numeric",
@@ -107,7 +111,11 @@ export default function GoalDetailPage({
             <CardTitle>Edit goal</CardTitle>
           </CardHeader>
           <CardContent>
-            <GoalForm goal={goal} onSubmit={handleUpdate} onCancel={() => setEditing(false)} />
+            <GoalForm
+              goal={goal}
+              onSubmit={handleUpdate}
+              onCancel={() => setEditing(false)}
+            />
           </CardContent>
         </Card>
       )}
@@ -136,19 +144,21 @@ export default function GoalDetailPage({
               requiredMonthlyMinor={projection.requiredMonthlyMinor}
               allocatedMonthlyMinor={projection.allocatedMonthlyMinor}
             />
-            <dl className="flex flex-col gap-2 border-t border-border pt-4 text-sm">
+            <dl className="border-border flex flex-col gap-2 border-t pt-4 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted">Already saved</dt>
                 <dd className="font-medium">{formatMoney(goal.savedMinor)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted">Funded by</dt>
-                <dd className="font-medium">{projection.fundedMonth ?? "Beyond 5-year horizon"}</dd>
+                <dd className="font-medium">
+                  {projection.fundedMonth ?? "Beyond 5-year horizon"}
+                </dd>
               </div>
               {projection.shortfallMinor > 0 && (
                 <div className="flex justify-between">
                   <dt className="text-muted">Shortfall at deadline</dt>
-                  <dd className="font-medium text-danger">
+                  <dd className="text-danger font-medium">
                     {formatMoney(projection.shortfallMinor)}
                   </dd>
                 </div>

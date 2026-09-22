@@ -7,7 +7,14 @@ import { MoneyInput } from "@/components/forms/money-input";
 import type { Cadence, IncomeKind, IncomeSource } from "@/lib/contract/types";
 
 const CADENCES: Cadence[] = ["weekly", "fortnightly", "monthly", "quarterly", "annual"];
-const KINDS: IncomeKind[] = ["salary", "bonus", "freelance", "rental", "allowance", "other"];
+const KINDS: IncomeKind[] = [
+  "salary",
+  "bonus",
+  "freelance",
+  "rental",
+  "allowance",
+  "other",
+];
 
 export interface IncomeFormValues {
   label: string;
@@ -29,7 +36,13 @@ function defaultsFrom(income?: IncomeSource): IncomeFormValues {
       variability: income.variability,
     };
   }
-  return { label: "", amountMinor: 0, cadence: "monthly", kind: "salary", variability: 0 };
+  return {
+    label: "",
+    amountMinor: 0,
+    cadence: "monthly",
+    kind: "salary",
+    variability: 0,
+  };
 }
 
 export function IncomeForm({
@@ -41,7 +54,9 @@ export function IncomeForm({
   onSubmit: (values: IncomeFormValues) => void;
   onCancel: () => void;
 }) {
-  const [values, setValues] = React.useState<IncomeFormValues>(() => defaultsFrom(income));
+  const [values, setValues] = React.useState<IncomeFormValues>(() =>
+    defaultsFrom(income),
+  );
   const needsAnchor = values.cadence === "quarterly" || values.cadence === "annual";
   const valid = values.label.trim().length > 0 && values.amountMinor > 0;
 
@@ -79,7 +94,9 @@ export function IncomeForm({
         <Select
           id="income-cadence"
           value={values.cadence}
-          onChange={(e) => setValues((v) => ({ ...v, cadence: e.target.value as Cadence }))}
+          onChange={(e) =>
+            setValues((v) => ({ ...v, cadence: e.target.value as Cadence }))
+          }
         >
           {CADENCES.map((c) => (
             <option key={c} value={c}>
@@ -94,7 +111,9 @@ export function IncomeForm({
         <Select
           id="income-kind"
           value={values.kind}
-          onChange={(e) => setValues((v) => ({ ...v, kind: e.target.value as IncomeKind }))}
+          onChange={(e) =>
+            setValues((v) => ({ ...v, kind: e.target.value as IncomeKind }))
+          }
         >
           {KINDS.map((k) => (
             <option key={k} value={k}>

@@ -20,20 +20,20 @@ export function TimelineRow({
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium">{name}</span>
         {delayed && (
-          <span className="text-xs font-medium text-danger">pushed back</span>
+          <span className="text-danger text-xs font-medium">pushed back</span>
         )}
       </div>
 
-      <div className="relative h-10 rounded-lg bg-surface">
-        <div className="absolute inset-y-0 left-0 w-px bg-border" />
-        <div className="absolute inset-y-0 right-0 w-px bg-border" />
+      <div className="bg-surface relative h-10 rounded-lg">
+        <div className="bg-border absolute inset-y-0 left-0 w-px" />
+        <div className="bg-border absolute inset-y-0 right-0 w-px" />
 
         {soloPct !== null && (
           <div
             className="absolute top-1.5 flex -translate-x-1/2 flex-col items-center gap-0.5"
             style={{ left: `${soloPct}%` }}
           >
-            <div className="size-2.5 rounded-full border-2 border-accent bg-surface" />
+            <div className="border-accent bg-surface size-2.5 rounded-full border-2" />
           </div>
         )}
 
@@ -42,13 +42,18 @@ export function TimelineRow({
             className="absolute top-1.5 flex -translate-x-1/2 flex-col items-center gap-0.5"
             style={{ left: `${togetherPct}%` }}
           >
-            <div className={cn("size-2.5 rounded-full", delayed ? "bg-danger" : "bg-accent")} />
+            <div
+              className={cn(
+                "size-2.5 rounded-full",
+                delayed ? "bg-danger" : "bg-accent",
+              )}
+            />
           </div>
         )}
 
         {soloPct !== null && togetherPct !== null && delayed && (
           <div
-            className="absolute top-[18px] h-0.5 bg-danger/40"
+            className="bg-danger/40 absolute top-[18px] h-0.5"
             style={{
               left: `${Math.min(soloPct, togetherPct)}%`,
               width: `${Math.abs(togetherPct - soloPct)}%`,
@@ -57,13 +62,15 @@ export function TimelineRow({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-muted">
+      <div className="text-muted flex items-center justify-between text-xs">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full border-2 border-accent bg-surface" /> Alone:{" "}
-          {soloLabel}
+          <span className="border-accent bg-surface size-2 rounded-full border-2" />{" "}
+          Alone: {soloLabel}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className={cn("size-2 rounded-full", delayed ? "bg-danger" : "bg-accent")} />{" "}
+          <span
+            className={cn("size-2 rounded-full", delayed ? "bg-danger" : "bg-accent")}
+          />{" "}
           Together: {togetherLabel}
         </span>
       </div>

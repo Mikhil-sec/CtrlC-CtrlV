@@ -40,7 +40,7 @@ export default function GoalsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Goals</h1>
-          <p className="text-sm text-muted">
+          <p className="text-muted text-sm">
             Everything you are saving for, funded from one shared surplus.
           </p>
         </div>
@@ -58,7 +58,11 @@ export default function GoalsPage() {
             <CardTitle>New goal</CardTitle>
           </CardHeader>
           <CardContent>
-            <GoalForm onSubmit={handleCreate} onCancel={() => setAdding(false)} submitLabel="Create goal" />
+            <GoalForm
+              onSubmit={handleCreate}
+              onCancel={() => setAdding(false)}
+              submitLabel="Create goal"
+            />
           </CardContent>
         </Card>
       )}
@@ -88,9 +92,9 @@ export default function GoalsPage() {
       )}
 
       {goals.length > 0 && (
-        <p className="text-sm text-muted">
+        <p className="text-muted text-sm">
           Want to see what running these together costs each of them?{" "}
-          <Link href="/contention" className="font-medium text-accent hover:underline">
+          <Link href="/contention" className="text-accent font-medium hover:underline">
             Open the tradeoff view
           </Link>
           .

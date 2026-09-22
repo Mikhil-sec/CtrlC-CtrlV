@@ -64,7 +64,9 @@ export function ExpenseForm({
   onSubmit: (values: ExpenseFormValues) => void;
   onCancel: () => void;
 }) {
-  const [values, setValues] = React.useState<ExpenseFormValues>(() => defaultsFrom(expense));
+  const [values, setValues] = React.useState<ExpenseFormValues>(() =>
+    defaultsFrom(expense),
+  );
   const needsAnchor = values.cadence === "quarterly" || values.cadence === "annual";
   const valid = values.label.trim().length > 0 && values.amountMinor > 0;
 
@@ -102,7 +104,9 @@ export function ExpenseForm({
         <Select
           id="expense-cadence"
           value={values.cadence}
-          onChange={(e) => setValues((v) => ({ ...v, cadence: e.target.value as Cadence }))}
+          onChange={(e) =>
+            setValues((v) => ({ ...v, cadence: e.target.value as Cadence }))
+          }
         >
           {CADENCES.map((c) => (
             <option key={c} value={c}>
@@ -150,7 +154,7 @@ export function ExpenseForm({
           type="checkbox"
           checked={values.essential}
           onChange={(e) => setValues((v) => ({ ...v, essential: e.target.checked }))}
-          className="size-4 accent-accent"
+          className="accent-accent size-4"
         />
         Essential — protected from across-the-board cuts in the sandbox
       </label>

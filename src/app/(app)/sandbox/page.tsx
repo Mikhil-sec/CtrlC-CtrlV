@@ -10,7 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label, Select } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AllocationStrategy, ExpenseCategory, Scenario, ScenarioAdjustment } from "@/lib/contract/types";
+import type {
+  AllocationStrategy,
+  ExpenseCategory,
+  Scenario,
+  ScenarioAdjustment,
+} from "@/lib/contract/types";
 import { applyScenario, buildPlan, diffPlans } from "@/lib/engine";
 import { usePlan } from "@/lib/store/plan-store";
 import { useSandboxScenario } from "@/lib/store/sandbox-scenario";
@@ -43,7 +48,9 @@ export default function SandboxPage() {
   const { consumePendingScenario } = useSandboxScenario();
 
   const [incomePercent, setIncomePercent] = React.useState(0);
-  const [categoryPercents, setCategoryPercents] = React.useState<Record<string, number>>({});
+  const [categoryPercents, setCategoryPercents] = React.useState<
+    Record<string, number>
+  >({});
   const [strategy, setStrategy] = React.useState<AllocationStrategy>(options.strategy);
   const [applied, setApplied] = React.useState<Scenario | null>(null);
 
@@ -109,7 +116,11 @@ export default function SandboxPage() {
   const delta = React.useMemo(() => {
     if (scenario.adjustments.length === 0) return null;
     const changedInputs = applyScenario(profile, goals, options, scenario);
-    const projected = buildPlan(changedInputs.profile, changedInputs.goals, changedInputs.options);
+    const projected = buildPlan(
+      changedInputs.profile,
+      changedInputs.goals,
+      changedInputs.options,
+    );
     return diffPlans(plan, projected, goals);
   }, [scenario, profile, goals, options, plan]);
 
@@ -130,7 +141,7 @@ export default function SandboxPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Sandbox</h1>
-          <p className="text-sm text-muted">
+          <p className="text-muted text-sm">
             Drag anything. Every plan on screen recomputes instantly, nothing is saved
             until you decide it should be.
           </p>
@@ -141,13 +152,13 @@ export default function SandboxPage() {
       </div>
 
       {applied && (
-        <div className="flex items-center gap-2 rounded-lg bg-accent-soft px-4 py-2.5 text-sm text-accent">
+        <div className="bg-accent-soft text-accent flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm">
           <span className="flex-1">Applied suggestion: {applied.summary}</span>
           <button
             type="button"
             onClick={() => setApplied(null)}
             aria-label="Remove applied suggestion"
-            className="rounded p-1 hover:bg-accent/10"
+            className="hover:bg-accent/10 rounded p-1"
           >
             <X className="size-3.5" />
           </button>
@@ -219,7 +230,7 @@ export default function SandboxPage() {
           ) : (
             <Card className="flex flex-col items-center gap-2 p-8 text-center">
               <Badge variant="neutral">No changes yet</Badge>
-              <p className="text-sm text-muted">
+              <p className="text-muted text-sm">
                 Move a slider to see how it changes your goal dates, live.
               </p>
             </Card>

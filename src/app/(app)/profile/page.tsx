@@ -77,7 +77,7 @@ export default function ProfilePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-          <p className="text-sm text-muted">
+          <p className="text-muted text-sm">
             What you earn and spend. Everything downstream is worked out from this.
           </p>
         </div>
@@ -100,7 +100,9 @@ export default function ProfilePage() {
           <CardTitle>Opening balance</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-1.5 sm:max-w-xs">
-          <Label htmlFor="opening-balance">Cash on hand, not earmarked for a goal</Label>
+          <Label htmlFor="opening-balance">
+            Cash on hand, not earmarked for a goal
+          </Label>
           <MoneyInput
             id="opening-balance"
             value={profile.openingBalanceMinor}
@@ -118,18 +120,21 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {addingIncome && (
-            <div className="rounded-lg border border-border p-4">
-              <IncomeForm onSubmit={handleIncomeCreate} onCancel={() => setAddingIncome(false)} />
+            <div className="border-border rounded-lg border p-4">
+              <IncomeForm
+                onSubmit={handleIncomeCreate}
+                onCancel={() => setAddingIncome(false)}
+              />
             </div>
           )}
 
           {profile.incomes.length === 0 && !addingIncome && (
-            <p className="text-sm text-muted">No income sources yet.</p>
+            <p className="text-muted text-sm">No income sources yet.</p>
           )}
 
           {profile.incomes.map((income) =>
             editingIncome === income.id ? (
-              <div key={income.id} className="rounded-lg border border-border p-4">
+              <div key={income.id} className="border-border rounded-lg border p-4">
                 <IncomeForm
                   income={income}
                   onSubmit={(values) => handleIncomeUpdate(income.id, values)}
@@ -139,11 +144,11 @@ export default function ProfilePage() {
             ) : (
               <div
                 key={income.id}
-                className="flex items-center justify-between gap-3 rounded-lg bg-surface px-4 py-3"
+                className="bg-surface flex items-center justify-between gap-3 rounded-lg px-4 py-3"
               >
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{income.label}</span>
-                  <span className="text-xs text-muted">
+                  <span className="text-muted text-xs">
                     {formatMoney(income.amountMinor)} &middot;{" "}
                     {cadenceLabel(income.cadence, income.anchorMonth)}
                   </span>
@@ -176,13 +181,17 @@ export default function ProfilePage() {
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle>Expenses</CardTitle>
-          <Button size="sm" variant="subtle" onClick={() => setAddingExpense((v) => !v)}>
+          <Button
+            size="sm"
+            variant="subtle"
+            onClick={() => setAddingExpense((v) => !v)}
+          >
             <Plus /> Add expense
           </Button>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {addingExpense && (
-            <div className="rounded-lg border border-border p-4">
+            <div className="border-border rounded-lg border p-4">
               <ExpenseForm
                 onSubmit={handleExpenseCreate}
                 onCancel={() => setAddingExpense(false)}
@@ -191,12 +200,12 @@ export default function ProfilePage() {
           )}
 
           {profile.expenses.length === 0 && !addingExpense && (
-            <p className="text-sm text-muted">No expenses yet.</p>
+            <p className="text-muted text-sm">No expenses yet.</p>
           )}
 
           {profile.expenses.map((expense) =>
             editingExpense === expense.id ? (
-              <div key={expense.id} className="rounded-lg border border-border p-4">
+              <div key={expense.id} className="border-border rounded-lg border p-4">
                 <ExpenseForm
                   expense={expense}
                   onSubmit={(values) => handleExpenseUpdate(expense.id, values)}
@@ -206,11 +215,11 @@ export default function ProfilePage() {
             ) : (
               <div
                 key={expense.id}
-                className="flex items-center justify-between gap-3 rounded-lg bg-surface px-4 py-3"
+                className="bg-surface flex items-center justify-between gap-3 rounded-lg px-4 py-3"
               >
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{expense.label}</span>
-                  <span className="text-xs text-muted">
+                  <span className="text-muted text-xs">
                     {formatMoney(expense.amountMinor)} &middot;{" "}
                     {cadenceLabel(expense.cadence, expense.anchorMonth)}
                   </span>

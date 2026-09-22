@@ -8,7 +8,7 @@ export default function SignInPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-8 px-6 py-20">
       <Link href="/" className="flex items-center gap-2 self-center font-semibold">
-        <span className="flex size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+        <span className="bg-accent text-accent-foreground flex size-8 items-center justify-center rounded-lg">
           <Wallet className="size-4" />
         </span>
         GoalPath
@@ -16,9 +16,9 @@ export default function SignInPage() {
 
       <div className="flex flex-col gap-2 text-center">
         <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-sm text-muted">
+        <p className="text-muted text-sm">
           Your own plan is saved to your account. Prefer to look around first?{" "}
-          <Link href="/dashboard" className="font-medium text-accent hover:underline">
+          <Link href="/dashboard" className="text-accent font-medium hover:underline">
             Try the demo
           </Link>
           .
@@ -33,7 +33,7 @@ export default function SignInPage() {
       >
         <button
           type="submit"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
+          className="bg-accent text-accent-foreground flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-90"
         >
           <Github className="size-4" />
           Continue with GitHub

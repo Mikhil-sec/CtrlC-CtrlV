@@ -34,7 +34,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted">
+        <p className="text-muted text-sm">
           Where your money is going, and whether your goals are on schedule.
         </p>
       </div>
@@ -44,7 +44,10 @@ export default function DashboardPage() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Your goals</h2>
-          <Link href="/goals" className="text-sm font-medium text-accent hover:underline">
+          <Link
+            href="/goals"
+            className="text-accent text-sm font-medium hover:underline"
+          >
             View all
           </Link>
         </div>
@@ -73,7 +76,7 @@ export default function DashboardPage() {
         {goals.length >= 2 && (
           <Card className="flex flex-col items-start gap-2 border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <Scale className="size-4 text-accent" />
+              <Scale className="text-accent size-4" />
               <span>
                 Your goals are drawing on the same surplus &mdash; see what running them
                 together costs each one.
@@ -92,7 +95,7 @@ export default function DashboardPage() {
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-semibold">Insights</h2>
         {insights.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-muted text-sm">
             Nothing urgent right now &mdash; your plan looks steady.
           </p>
         ) : (

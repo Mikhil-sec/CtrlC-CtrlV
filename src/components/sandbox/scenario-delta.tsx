@@ -25,7 +25,7 @@ export function ScenarioDelta({ delta }: { delta: PlanDelta }) {
       </div>
 
       {delta.goals.length === 0 ? (
-        <p className="text-sm text-muted">No goals to compare yet.</p>
+        <p className="text-muted text-sm">No goals to compare yet.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {delta.goals.map((g) => {
@@ -34,14 +34,19 @@ export function ScenarioDelta({ delta }: { delta: PlanDelta }) {
             const Icon = sooner ? TrendingUp : later ? TrendingDown : Minus;
 
             return (
-              <li key={g.goalId} className="flex items-center justify-between gap-3 text-sm">
+              <li
+                key={g.goalId}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
                 <span className="font-medium">{g.name}</span>
-                <span className="flex items-center gap-2 text-muted">
-                  <span className="tabular-nums">{g.baselineFundedMonth ?? "unfunded"}</span>
+                <span className="text-muted flex items-center gap-2">
+                  <span className="tabular-nums">
+                    {g.baselineFundedMonth ?? "unfunded"}
+                  </span>
                   <ArrowRight className="size-3.5" />
                   <span
                     className={cn(
-                      "tabular-nums font-medium",
+                      "font-medium tabular-nums",
                       sooner && "text-success",
                       later && "text-danger",
                     )}
@@ -68,8 +73,10 @@ export function ScenarioDelta({ delta }: { delta: PlanDelta }) {
         </ul>
       )}
 
-      {delta.goals.some((g) => g.scenarioShortfallMinor !== g.baselineShortfallMinor) && (
-        <div className="border-t border-border pt-3 text-xs text-muted">
+      {delta.goals.some(
+        (g) => g.scenarioShortfallMinor !== g.baselineShortfallMinor,
+      ) && (
+        <div className="border-border text-muted border-t pt-3 text-xs">
           Shortfalls:{" "}
           {delta.goals
             .filter((g) => g.scenarioShortfallMinor !== g.baselineShortfallMinor)

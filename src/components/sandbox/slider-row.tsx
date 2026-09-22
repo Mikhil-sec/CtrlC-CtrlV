@@ -37,7 +37,7 @@ export function SliderRow({
           {display}
         </span>
       </div>
-      {sublabel && <p className="text-xs text-muted">{sublabel}</p>}
+      {sublabel && <p className="text-muted text-xs">{sublabel}</p>}
       <Slider
         min={min}
         max={max}

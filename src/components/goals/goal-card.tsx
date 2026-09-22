@@ -18,20 +18,18 @@ export function GoalCard({
   const meta = GOAL_STATUS_META[projection.status];
   const Icon = meta.icon;
   const currentBalance = projection.balances[0] ?? goal.savedMinor;
-  const progressPct = goal.targetMinor > 0 ? (currentBalance / goal.targetMinor) * 100 : 0;
+  const progressPct =
+    goal.targetMinor > 0 ? (currentBalance / goal.targetMinor) * 100 : 0;
 
   return (
     <Link href={`/goals/${goal.id}`} className="block">
       <Card
-        className={cn(
-          "border-l-4 p-5 transition-shadow hover:shadow-md",
-          meta.ring,
-        )}
+        className={cn("border-l-4 p-5 transition-shadow hover:shadow-md", meta.ring)}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             <h3 className="font-semibold">{goal.name}</h3>
-            <p className="text-sm text-muted">
+            <p className="text-muted text-sm">
               Target {formatMoney(goal.targetMinor)} by{" "}
               {new Date(goal.targetDate).toLocaleDateString("en-GB", {
                 month: "short",
@@ -47,13 +45,13 @@ export function GoalCard({
 
         <div className="mt-4 flex flex-col gap-2">
           <Progress value={progressPct} />
-          <div className="flex items-center justify-between text-xs text-muted">
+          <div className="text-muted flex items-center justify-between text-xs">
             <span>{formatMoney(currentBalance)} saved</span>
             <span>{Math.round(Math.min(100, progressPct))}%</span>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-sm">
+        <div className="border-border mt-4 flex items-center justify-between border-t pt-3 text-sm">
           <span className="text-muted">
             {projection.status === "achieved"
               ? "Fully funded"
@@ -61,10 +59,13 @@ export function GoalCard({
                 ? `Funded ${projection.fundedMonth}`
                 : "Not funded in range"}
             {projection.shortfallMinor > 0 && (
-              <span className="text-danger"> &middot; {formatMoney(projection.shortfallMinor)} short</span>
+              <span className="text-danger">
+                {" "}
+                &middot; {formatMoney(projection.shortfallMinor)} short
+              </span>
             )}
           </span>
-          <span className="flex items-center gap-1 font-medium text-accent">
+          <span className="text-accent flex items-center gap-1 font-medium">
             Details <ArrowRight className="size-3.5" />
           </span>
         </div>

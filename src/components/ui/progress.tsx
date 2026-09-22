@@ -16,10 +16,13 @@ export function Progress({
       aria-valuenow={Math.round(clamped)}
       aria-valuemin={0}
       aria-valuemax={100}
-      className={cn("h-2 w-full overflow-hidden rounded-full bg-surface", className)}
+      className={cn("bg-surface h-2 w-full overflow-hidden rounded-full", className)}
     >
       <div
-        className={cn("h-full rounded-full bg-accent transition-[width] duration-300", barClassName)}
+        className={cn(
+          "bg-accent h-full rounded-full transition-[width] duration-300",
+          barClassName,
+        )}
         style={{ width: `${clamped}%` }}
       />
     </div>

@@ -17,12 +17,12 @@ export function InsightCard({ insight }: { insight: Insight }) {
     <Card className="flex flex-col gap-2 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Icon className="size-4 shrink-0 text-muted" />
+          <Icon className="text-muted size-4 shrink-0" />
           <h4 className="text-sm font-semibold">{insight.title}</h4>
         </div>
         <Badge variant={meta.badge}>{meta.label}</Badge>
       </div>
-      <p className="text-sm text-muted">{insight.detail}</p>
+      <p className="text-muted text-sm">{insight.detail}</p>
       {insight.action && (
         <div className="mt-1">
           <Link
