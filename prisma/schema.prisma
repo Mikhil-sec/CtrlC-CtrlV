@@ -1,0 +1,177 @@
+// GoalPath database schema.
+//
+// Money is stored as a whole number of cents in Int columns, matching the
+// `Minor` type the application works in. No column holds a decimal, so nothing
+// can be rounded on the way in or out.
+//
+// Every row that belongs to a person carries a userId and is indexed on it.
+// The query helpers in src/lib/db always filter on it; nothing reads a row
+// without knowing whose it is.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// The connection URL lives in prisma.config.ts, which Prisma 7 requires; the
+// running client gets it through the pg driver adapter in src/lib/db/client.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Authentication. These four models are the shape Auth.js expects.
+// -----------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  // A demo account is seeded and read-only, so it can be shown without a login.
+  isDemo Boolean @default(false)
+
+  accounts Account[]
+  sessions Session[]
+  profile  Profile?
+  goals    Goal[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// -----------------------------------------------------------------------------
+// The financial model.
+// -----------------------------------------------------------------------------
+
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  /// Cash on hand that is not yet earmarked for a goal, in cents.
+  openingBalanceMinor Int @default(0)
+
+  /// Held back as an emergency buffer and never allocated to goals, in cents.
+  reserveMinor Int @default(0)
+
+  /// How a month's surplus is split between competing goals.
+  allocationStrategy String @default("priority")
+
+  updatedAt DateTime @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incomes  IncomeSource[]
+  expenses Expense[]
+}
+
+model IncomeSource {
+  id        String @id @default(cuid())
+  profileId String
+
+  label       String
+  /// Take-home amount per occurrence of the cadence, in cents.
+  amountMinor Int
+  cadence     String
+  kind        String
+
+  /// Calendar month 1-12 the payment lands in, for quarterly and annual items.
+  anchorMonth Int?
+
+  /// Coefficient of variation for the simulation, 0-1.
+  variability Float @default(0)
+
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model Expense {
+  id        String @id @default(cuid())
+  profileId String
+
+  label       String
+  /// Amount per occurrence of the cadence, in cents.
+  amountMinor Int
+  cadence     String
+  category    String
+
+  /// Calendar month 1-12 the payment lands in, for quarterly and annual items.
+  anchorMonth Int?
+
+  /// Essential spending is protected from across-the-board cuts in scenarios.
+  essential Boolean @default(false)
+
+  /// Coefficient of variation for the simulation, 0-1.
+  variability Float @default(0)
+
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([profileId, category])
+}
+
+model Goal {
+  id     String @id @default(cuid())
+  userId String
+
+  name String
+  /// What the goal costs, in cents.
+  targetMinor Int
+  /// Already put aside for this specific goal, in cents.
+  savedMinor  Int      @default(0)
+  targetDate  DateTime @db.Date
+  /// 1 is funded first.
+  priority    Int      @default(1)
+  category    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, priority])
+}
