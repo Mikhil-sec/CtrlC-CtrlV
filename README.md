@@ -31,6 +31,32 @@ TypeScript engine, which produces every figure on screen. If the model returns
 anything outside that set it is rejected, and a rule-based parser handles the
 question instead. No figure shown to a user was written by a model.
 
+## Who it is for
+
+Someone earning Rs 25,000–40,000 a month has a thin surplus and usually more
+than one thing they are saving for. That is exactly the situation where the
+order you fund things in changes the outcome by months, and exactly the
+situation a single-goal calculator cannot describe. Above a certain income the
+question stops mattering. This is built for the income where it matters most.
+
+The useful answer is often "no". A tool that says _this is not reachable by
+June, and here is the earliest it is_ helps someone avoid borrowing to close a
+gap they did not know they had. Showing a shortfall before the purchase is more
+valuable than encouragement after it.
+
+Each insight ties a concept — an emergency fund, opportunity cost, income that
+arrives in lumps — to a figure from the user's own budget, because generic
+advice gets ignored and specific advice does not.
+
+It takes no bank credentials and moves no money, which keeps it something a
+bank, credit union or employer could offer as an advisory tool without the
+regulatory weight of a payments product. The engine runs in the browser, so the
+cost of serving another user is close to nothing.
+
+**Known limits.** Manual entry is friction; `src/lib/sources/types.ts` defines
+the interface a bank feed would implement. Mauritian rupees only. Income is
+entered as take-home, so there is no tax modelling.
+
 ## Running it
 
 Requires Node 24 and a PostgreSQL database. The free tier of
