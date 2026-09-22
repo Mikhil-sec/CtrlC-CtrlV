@@ -17,6 +17,7 @@ import type {
   Scenario,
   ScenarioAdjustment,
 } from "@/lib/contract/types";
+import { calendarMonth, currentMonth, monthsBetween } from "@/lib/engine/calendar";
 import { parseAmount } from "@/lib/engine/money";
 
 const CATEGORY_WORDS: Array<[ExpenseCategory, string[]]> = [
@@ -95,6 +96,50 @@ function findCadence(text: string): Cadence {
   return "monthly";
 }
 
+const MONTH_NAMES = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+/**
+ * When a question names a starting month — "starting in December", "a raise
+ * from June", "next month" — this is the month offset from now that
+ * `fromMonth` and `monthIndex` expect. Undefined when the question does not
+ * name a time, which callers should treat as "starting now".
+ *
+ * A bare month name resolves to its next occurrence: naming the current
+ * calendar month means next year's, since "starting in September" said in
+ * September almost always means a year from now, not today.
+ */
+function findFromMonth(
+  text: string,
+  reference: string = currentMonth(),
+): number | undefined {
+  if (/\bnext month\b/.test(text)) return 1;
+  if (/\bthis month\b/.test(text)) return 0;
+
+  const namedIndex = MONTH_NAMES.findIndex((name) => text.includes(name));
+  if (namedIndex === -1) return undefined;
+
+  const targetCalendarMonth = namedIndex + 1;
+  const referenceCalendarMonth = calendarMonth(reference);
+  const yearOffset = targetCalendarMonth > referenceCalendarMonth ? 0 : 1;
+  const [year] = reference.split("-").map(Number);
+  const targetMonth = `${String(year + yearOffset).padStart(4, "0")}-${String(targetCalendarMonth).padStart(2, "0")}`;
+
+  return monthsBetween(reference, targetMonth);
+}
+
 /**
  * Attempts to read a question as a scenario.
  *
@@ -105,6 +150,7 @@ export function parseScenarioFromText(question: string): Scenario | null {
   const text = question.toLowerCase().trim();
   const percent = findPercent(text);
   const amountMinor = findAmountMinor(text);
+  const fromMonth = findFromMonth(text);
 
   const decreasing = includesAny(text, DECREASE_WORDS);
   const increasing = includesAny(text, INCREASE_WORDS);
@@ -113,13 +159,14 @@ export function parseScenarioFromText(question: string): Scenario | null {
   const adjustments: ScenarioAdjustment[] = [];
   let label = "Your scenario";
 
-  // A lump sum arriving once: a bonus, a refund, something sold.
+  // A lump sum arriving once: a bonus, a refund, something sold. A named
+  // month places it there; otherwise it lands this month.
   if (includesAny(text, INFLOW_WORDS) && amountMinor) {
     adjustments.push({
       type: "one_off_inflow",
       label: "One-off amount",
       amountMinor,
-      monthIndex: 0,
+      monthIndex: fromMonth ?? 0,
     });
     label = "One-off amount";
   } else if (aboutIncome && (increasing || decreasing)) {
@@ -129,6 +176,10 @@ export function parseScenarioFromText(question: string): Scenario | null {
       ...(percent !== null
         ? { byPercent: direction * percent }
         : { byAmountMinor: direction * (amountMinor ?? 0) }),
+      // A change with no named start applies from the current profile, so
+      // omit fromMonth rather than set it to 0 — the two are handled
+      // differently by applyScenario, and only one of them is right here.
+      ...(fromMonth ? { fromMonth } : {}),
     });
     label = decreasing ? "Lower income" : "Higher income";
   } else if (decreasing || increasing) {
@@ -140,6 +191,7 @@ export function parseScenarioFromText(question: string): Scenario | null {
       ...(percent !== null
         ? { byPercent: direction * percent }
         : { byAmountMinor: direction * (amountMinor ?? 0) }),
+      ...(fromMonth ? { fromMonth } : {}),
     });
     label = category
       ? `${decreasing ? "Less" : "More"} on ${category}`

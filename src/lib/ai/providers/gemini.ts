@@ -17,8 +17,16 @@ import {
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
-/** Overridable because free-tier model availability changes. */
-const DEFAULT_MODEL = "gemini-2.5-flash";
+/**
+ * Overridable because free-tier model availability changes — it already has
+ * once, when "gemini-2.5-flash" stopped being issued to new API keys.
+ *
+ * The "lite" tier, not the full "flash" one: compiling a sentence into a
+ * fixed set of adjustments is extraction, not reasoning, so the lite model is
+ * both sufficient and has a much less restrictive free-tier request quota per
+ * day than the newest flash preview a bare "-latest" alias resolves to.
+ */
+const DEFAULT_MODEL = "gemini-flash-lite-latest";
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -50,10 +58,20 @@ export function createGeminiProvider(apiKey: string): AiProvider {
             // adjustments is an extraction task, not a creative one.
             temperature: 0.2,
             maxOutputTokens: request.maxOutputTokens ?? 1024,
+            // `responseSchema` (Gemini's controlled generation) is
+            // deliberately not sent even when `request.schema` is present.
+            // Verified live: with it, the model reliably satisfies the JSON
+            // shape but drops fields the schema marks optional — such as
+            // `byPercent` on an `adjust_expense` — even when the prompt says
+            // plainly that the field is required for that adjustment. Without
+            // it, free-form generation guided by the prompt gets this right
+            // consistently. The shape is still restated in the prompt and
+            // enforced by our own Zod validation afterwards, the same way
+            // `github-models.ts` already treats `schema` as a JSON-mode flag
+            // rather than a constraint to send.
             ...(request.schema
               ? {
                   responseMimeType: "application/json",
-                  responseSchema: request.schema,
                 }
               : {}),
           },
