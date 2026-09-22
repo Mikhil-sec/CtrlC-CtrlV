@@ -11,13 +11,28 @@ export const metadata: Metadata = {
     "Work out whether your financial goals are reachable, and what it would take to get there.",
 };
 
+// Runs before paint so the theme is correct on first render, avoiding a
+// light-then-dark flash. Falls back to the OS preference for a first visit.
+const themeInitScript = `
+(function () {
+  try {
+    var stored = localStorage.getItem("goalpath-theme");
+    var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.classList.toggle("dark", dark);
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-white font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-background font-sans text-foreground antialiased`}
       >
         {children}
       </body>
