@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Github, Wallet } from "lucide-react";
+// The installed lucide-react version dropped brand/logo icons (Github
+// included), so GitBranch stands in as a generic version-control mark.
+import { GitBranch as Github, Wallet } from "lucide-react";
 import { signIn } from "@/auth";
 
 export default function SignInPage() {

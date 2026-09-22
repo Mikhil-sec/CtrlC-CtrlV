@@ -40,7 +40,7 @@ const CATEGORY_LABEL: Record<ExpenseCategory, string> = {
 
 export default function SandboxPage() {
   const { profile, goals, options, plan, hydrated } = usePlan();
-  const { pendingScenario, consumePendingScenario } = useSandboxScenario();
+  const { consumePendingScenario } = useSandboxScenario();
 
   const [incomePercent, setIncomePercent] = React.useState(0);
   const [categoryPercents, setCategoryPercents] = React.useState<Record<string, number>>({});
@@ -48,13 +48,21 @@ export default function SandboxPage() {
   const [applied, setApplied] = React.useState<Scenario | null>(null);
 
   React.useEffect(() => {
+    // Reads and clears the handoff from a dashboard insight's "try this"
+    // button, held in a sibling context rather than a prop, so it cannot be
+    // read during this component's own render.
     const scenario = consumePendingScenario();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (scenario) setApplied(scenario);
     // Only ever consume the scenario the dashboard handed off, once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   React.useEffect(() => {
+    // Keeps the slider in sync when the saved default strategy changes
+    // underneath it (a profile update, a reset), without clobbering a choice
+    // the person is actively making in this session.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStrategy(options.strategy);
   }, [options.strategy]);
 

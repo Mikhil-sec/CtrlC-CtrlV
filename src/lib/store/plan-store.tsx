@@ -85,7 +85,9 @@ interface PlanContextValue {
   onboarded: boolean;
   hydrated: boolean;
 
-  updateProfile: (patch: Partial<Pick<FinancialProfile, "openingBalanceMinor">>) => void;
+  updateProfile: (
+    patch: Partial<Pick<FinancialProfile, "openingBalanceMinor">>,
+  ) => void;
 
   addIncome: (income: Omit<IncomeSource, "id">) => void;
   updateIncome: (id: string, patch: Partial<Omit<IncomeSource, "id">>) => void;
@@ -116,6 +118,10 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   // then replaced with whatever the visitor last saved once we can read
   // localStorage, so there is no mismatch on hydration.
   React.useEffect(() => {
+    // localStorage does not exist on the server, so the saved state can only
+    // be read after mount — this is the hydration swap the comment above
+    // describes, not state derivable during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState(loadState());
     setHydrated(true);
   }, []);
@@ -159,8 +165,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       onboarded: state.onboarded,
       hydrated,
 
-      updateProfile: (patch) =>
-        patchProfile((profile) => ({ ...profile, ...patch })),
+      updateProfile: (patch) => patchProfile((profile) => ({ ...profile, ...patch })),
 
       addIncome: (income) =>
         patchProfile((profile) => ({

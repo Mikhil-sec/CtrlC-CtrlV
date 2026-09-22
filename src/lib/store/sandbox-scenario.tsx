@@ -20,23 +20,25 @@ interface ScenarioBridgeValue {
 const ScenarioBridgeContext = React.createContext<ScenarioBridgeValue | null>(null);
 
 export function ScenarioBridgeProvider({ children }: { children: React.ReactNode }) {
-  const ref = React.useRef<Scenario | null>(null);
-  const [, forceRender] = React.useReducer((c: number) => c + 1, 0);
+  const [pendingScenario, setPendingScenarioState] = React.useState<Scenario | null>(
+    null,
+  );
 
   const value = React.useMemo<ScenarioBridgeValue>(
     () => ({
-      pendingScenario: ref.current,
-      setPendingScenario: (scenario) => {
-        ref.current = scenario;
-        forceRender();
-      },
+      pendingScenario,
+      setPendingScenario: (scenario) => setPendingScenarioState(scenario),
+      // Reads the value captured in this closure, which React guarantees is
+      // current for the render that produced it, then clears it. A ref read
+      // during render (the previous implementation) has no such guarantee
+      // under concurrent rendering, where a render can be started, discarded
+      // and retried before it commits.
       consumePendingScenario: () => {
-        const scenario = ref.current;
-        ref.current = null;
-        return scenario;
+        setPendingScenarioState(null);
+        return pendingScenario;
       },
     }),
-    [],
+    [pendingScenario],
   );
 
   return (
@@ -48,6 +50,7 @@ export function ScenarioBridgeProvider({ children }: { children: React.ReactNode
 
 export function useSandboxScenario(): ScenarioBridgeValue {
   const ctx = React.useContext(ScenarioBridgeContext);
-  if (!ctx) throw new Error("useSandboxScenario must be used within a ScenarioBridgeProvider");
+  if (!ctx)
+    throw new Error("useSandboxScenario must be used within a ScenarioBridgeProvider");
   return ctx;
 }

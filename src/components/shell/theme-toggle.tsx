@@ -8,6 +8,11 @@ export function ThemeToggle() {
   const [dark, setDark] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
+    // Reads the class the inline script in the document head already set
+    // before hydration. Must run after mount — the class lives on `document`,
+    // which does not exist on the server — so the icon renders blank for one
+    // frame rather than guessing and risking a flash of the wrong theme.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDark(document.documentElement.classList.contains("dark"));
   }, []);
 

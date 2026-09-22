@@ -30,6 +30,10 @@ export function MoneyInput({
   const [invalid, setInvalid] = React.useState(false);
 
   React.useEffect(() => {
+    // Syncs the editable text buffer when `value` changes from outside this
+    // field (a reset, an undo, another control writing the same amount) —
+    // not a derived value this component can compute during its own render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setText(String(toRupees(value)));
     setInvalid(false);
   }, [value]);
@@ -53,7 +57,7 @@ export function MoneyInput({
 
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted">
+      <span className="text-muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
         Rs
       </span>
       <Input
@@ -69,7 +73,9 @@ export function MoneyInput({
           className,
         )}
       />
-      {invalid && <p className="mt-1 text-xs text-danger">Enter a number, like 1500 or 1,500.</p>}
+      {invalid && (
+        <p className="text-danger mt-1 text-xs">Enter a number, like 1500 or 1,500.</p>
+      )}
     </div>
   );
 }
