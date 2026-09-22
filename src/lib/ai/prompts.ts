@@ -43,7 +43,14 @@ export const SCENARIO_RESPONSE_SCHEMA: Record<string, unknown> = {
       items: {
         type: "OBJECT",
         properties: {
+          // Ordered so the fields that actually carry the size of a change
+          // — the ones most often dropped — are generated right after the
+          // adjustment's type, rather than last among a dozen mostly-unused
+          // optional fields.
           type: { type: "STRING" },
+          byPercent: { type: "NUMBER" },
+          byAmountMinor: { type: "INTEGER" },
+          amountMinor: { type: "INTEGER" },
           incomeId: { type: "STRING" },
           expenseId: { type: "STRING" },
           goalId: { type: "STRING" },
@@ -52,15 +59,31 @@ export const SCENARIO_RESPONSE_SCHEMA: Record<string, unknown> = {
           label: { type: "STRING" },
           cadence: { type: "STRING" },
           kind: { type: "STRING" },
-          byPercent: { type: "NUMBER" },
-          byAmountMinor: { type: "INTEGER" },
-          amountMinor: { type: "INTEGER" },
           monthIndex: { type: "INTEGER" },
           fromMonth: { type: "INTEGER" },
           priority: { type: "INTEGER" },
           targetDate: { type: "STRING" },
           targetMinor: { type: "INTEGER" },
         },
+        propertyOrdering: [
+          "type",
+          "byPercent",
+          "byAmountMinor",
+          "amountMinor",
+          "incomeId",
+          "expenseId",
+          "goalId",
+          "category",
+          "strategy",
+          "label",
+          "cadence",
+          "kind",
+          "monthIndex",
+          "fromMonth",
+          "priority",
+          "targetDate",
+          "targetMinor",
+        ],
         required: ["type"],
       },
     },
@@ -96,13 +119,26 @@ IncomeKind is one of: salary, bonus, freelance, rental, allowance, other.
 Rules:
 - Every amount is an integer number of CENTS. Rs 500 is 50000.
 - A reduction is negative: cutting spending by a fifth is "byPercent": -20.
+- "adjust_income" and "adjust_expense" both need a size, "byPercent" or
+  "byAmountMinor" — whichever the question actually states. Identifying which
+  item to change (via "expenseId", "incomeId", or "category") is not enough on
+  its own: an adjustment with no size does nothing, which is wrong whenever the
+  question names an amount or a percentage. Never emit "adjust_income" or
+  "adjust_expense" without one.
 - "monthIndex" and "fromMonth" count months from now, so 0 is this month.
 - Use an id from the inventory below when the person names a specific item. Omit
   the id to apply a change across the board; an untargeted expense cut is
   applied to non-essential spending only.
 - If the question does not describe a change to the plan, return an empty
   "adjustments" array and say why in "summary".
-- Return only JSON.`;
+- Return only JSON.
+
+Example — question: "cut dining out by 30%", with expense id=expense-dining
+"Eating out and takeaway" in the inventory:
+
+Correct: { "label": "Cut dining out", "summary": "Reduce dining out spending by 30%.", "adjustments": [{ "type": "adjust_expense", "expenseId": "expense-dining", "byPercent": -30 }] }
+
+Wrong, a common mistake — identifies the right item but drops the size, so nothing actually changes: { "adjustments": [{ "type": "adjust_expense", "expenseId": "expense-dining" }] }`;
 
 /** The ids and figures a model is allowed to refer to. */
 export function buildScenarioContext(profile: FinancialProfile, goals: Goal[]): string {

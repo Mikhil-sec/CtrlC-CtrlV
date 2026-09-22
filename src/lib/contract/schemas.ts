@@ -147,7 +147,7 @@ const percentChange = z.number().min(-100).max(500);
 /** Month offset within the projection horizon. */
 const monthIndex = z.number().int().min(0).max(600);
 
-export const scenarioAdjustmentSchema = z.discriminatedUnion("type", [
+const rawScenarioAdjustmentSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("adjust_income"),
     incomeId: z.string().optional(),
@@ -209,6 +209,30 @@ export const scenarioAdjustmentSchema = z.discriminatedUnion("type", [
     amountMinor: positiveMinor,
   }),
 ]);
+
+/**
+ * `adjust_income` and `adjust_expense` both exist to change a size, and a
+ * model asked for one sometimes identifies the right item and drops the size
+ * anyway — the schema alone cannot catch that, since both fields are
+ * individually optional so the same shape can express "apply to everything".
+ * Rejecting the no-op case here means it falls back to the rules parser
+ * instead of silently doing nothing, which is what the architecture promises:
+ * a malformed or meaningless adjustment is cleanly rejected, never applied.
+ */
+export const scenarioAdjustmentSchema = rawScenarioAdjustmentSchema.superRefine(
+  (adjustment, ctx) => {
+    if (
+      (adjustment.type === "adjust_income" || adjustment.type === "adjust_expense") &&
+      adjustment.byPercent === undefined &&
+      adjustment.byAmountMinor === undefined
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: `${adjustment.type} needs byPercent or byAmountMinor`,
+      });
+    }
+  },
+);
 
 export const scenarioSchema = z.object({
   id: z.string(),
