@@ -122,6 +122,28 @@ export async function loadPlanInputs(userId: string): Promise<PlanInputs> {
   };
 }
 
+/** The profile's own settings, without incomes, expenses or goals. */
+export interface ProfileSettings {
+  openingBalanceMinor: number;
+  reserveMinor: number;
+  allocationStrategy: AllocationStrategy;
+}
+
+/** Defaults for someone who has not saved a profile yet. */
+function emptySettings(): ProfileSettings {
+  return { openingBalanceMinor: 0, reserveMinor: 0, allocationStrategy: "priority" };
+}
+
+export async function getProfile(userId: string): Promise<ProfileSettings> {
+  const profile = await prisma.profile.findUnique({ where: { userId } });
+  if (!profile) return emptySettings();
+  return {
+    openingBalanceMinor: profile.openingBalanceMinor,
+    reserveMinor: profile.reserveMinor,
+    allocationStrategy: profile.allocationStrategy as AllocationStrategy,
+  };
+}
+
 /** Creates the profile row on first use, so later writes can assume it exists. */
 export async function ensureProfile(userId: string): Promise<string> {
   const profile = await prisma.profile.upsert({
