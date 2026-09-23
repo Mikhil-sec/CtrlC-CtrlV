@@ -29,10 +29,14 @@ export default function GoalsPage() {
     );
   }
 
-  function handleCreate(values: GoalFormValues) {
-    const created = addGoal(values);
-    setAdding(false);
-    router.push(`/goals/${created.id}`);
+  async function handleCreate(values: GoalFormValues) {
+    try {
+      const created = await addGoal(values);
+      setAdding(false);
+      router.push(`/goals/${created.id}`);
+    } catch {
+      // The shared error banner already reported this; stay on the form.
+    }
   }
 
   return (

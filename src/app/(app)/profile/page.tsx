@@ -34,7 +34,7 @@ export default function ProfilePage() {
     addExpense,
     updateExpense,
     removeExpense,
-    resetToDemo,
+    refresh,
     hydrated,
   } = usePlan();
 
@@ -56,19 +56,19 @@ export default function ProfilePage() {
   const isNew = profile.incomes.length === 0 && profile.expenses.length === 0;
 
   function handleIncomeCreate(values: IncomeFormValues) {
-    addIncome(values);
+    addIncome(values).catch(() => {});
     setAddingIncome(false);
   }
   function handleIncomeUpdate(id: string, values: IncomeFormValues) {
-    updateIncome(id, values);
+    updateIncome(id, values).catch(() => {});
     setEditingIncome(null);
   }
   function handleExpenseCreate(values: ExpenseFormValues) {
-    addExpense(values);
+    addExpense(values).catch(() => {});
     setAddingExpense(false);
   }
   function handleExpenseUpdate(id: string, values: ExpenseFormValues) {
-    updateExpense(id, values);
+    updateExpense(id, values).catch(() => {});
     setEditingExpense(null);
   }
 
@@ -81,8 +81,8 @@ export default function ProfilePage() {
             What you earn and spend. Everything downstream is worked out from this.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={resetToDemo}>
-          Reset to demo data
+        <Button variant="outline" size="sm" onClick={() => refresh()}>
+          Refresh
         </Button>
       </div>
 
@@ -106,7 +106,9 @@ export default function ProfilePage() {
           <MoneyInput
             id="opening-balance"
             value={profile.openingBalanceMinor}
-            onChange={(openingBalanceMinor) => updateProfile({ openingBalanceMinor })}
+            onChange={(openingBalanceMinor) =>
+              updateProfile({ openingBalanceMinor }).catch(() => {})
+            }
           />
         </CardContent>
       </Card>
@@ -167,7 +169,7 @@ export default function ProfilePage() {
                     variant="ghost"
                     size="icon"
                     aria-label={`Remove ${income.label}`}
-                    onClick={() => removeIncome(income.id)}
+                    onClick={() => removeIncome(income.id).catch(() => {})}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -240,7 +242,7 @@ export default function ProfilePage() {
                     variant="ghost"
                     size="icon"
                     aria-label={`Remove ${expense.label}`}
-                    onClick={() => removeExpense(expense.id)}
+                    onClick={() => removeExpense(expense.id).catch(() => {})}
                   >
                     <Trash2 className="size-4" />
                   </Button>

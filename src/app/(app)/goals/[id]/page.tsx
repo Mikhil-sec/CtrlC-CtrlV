@@ -60,15 +60,23 @@ export default function GoalDetailPage({
 
   const meta = GOAL_STATUS_META[projection.status];
 
-  function handleUpdate(values: GoalFormValues) {
-    updateGoal(id, values);
-    setEditing(false);
+  async function handleUpdate(values: GoalFormValues) {
+    try {
+      await updateGoal(id, values);
+      setEditing(false);
+    } catch {
+      // The shared error banner already reported this; stay on the form.
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!window.confirm(`Delete "${goal!.name}"? This cannot be undone.`)) return;
-    removeGoal(id);
-    router.push("/goals");
+    try {
+      await removeGoal(id);
+      router.push("/goals");
+    } catch {
+      // The shared error banner already reported this; stay on the page.
+    }
   }
 
   return (

@@ -1,78 +1,72 @@
 "use client";
 
 /**
- * Client-side stand-in for the backend.
+ * The client-side view of someone's saved plan.
  *
- * The UI is built against the engine and the demo fixture per the interface
- * brief, so every screen works before the database and API routes are wired
- * up. State lives in localStorage and is recomputed through the same pure
- * engine functions the server will eventually call. Swapping this for real
- * fetches to `/api/*` is a matter of replacing the body of this provider —
- * every component below only ever talks to `usePlan()`.
+ * This used to seed itself from the demo fixture into localStorage and never
+ * touch the network — every visitor, signed in or not, saw the same local
+ * copy. That was the round-1 placeholder promised in the interface brief:
+ * "swapping this for real fetches to /api/* is a few lines in one place."
+ * This is that swap.
+ *
+ * Reads go through `readableUserId()` server-side, so a guest transparently
+ * gets the demo account's data with no special-casing here. Every mutation
+ * hits the matching `/api/*` route, which is the single source of truth —
+ * local state is updated from what the route hands back, never assumed.
  */
 
 import * as React from "react";
 import type {
-  AllocationStrategy,
   Expense,
   FinancialProfile,
   Goal,
   IncomeSource,
-  Insight,
   PlanOptions,
   PlanResult,
 } from "@/lib/contract/types";
-import { demoGoals, demoProfile } from "@/lib/contract/fixtures";
 import {
-  buildInsights,
   buildPlan,
   currentMonth,
-  defaultPlanOptions,
+  DEFAULT_HORIZON_MONTHS,
   soloFundingMonths,
 } from "@/lib/engine";
 
-const STORAGE_KEY = "goalpath-state-v1";
+/** The shape `GET /api/profile` returns — settings only, no line items. */
+interface ProfileSettings {
+  openingBalanceMinor: number;
+  reserveMinor: number;
+  allocationStrategy: PlanOptions["strategy"];
+}
 
-interface PersistedState {
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.error?.message ?? "Something went wrong. Try again.");
+  }
+  return (body?.data ?? null) as T;
+}
+
+interface PlanState {
   profile: FinancialProfile;
   goals: Goal[];
   options: PlanOptions;
-  onboarded: boolean;
 }
 
-function newId(prefix: string): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `${prefix}-${crypto.randomUUID()}`;
-  }
-  return `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-}
-
-function demoState(): PersistedState {
-  const startMonth = currentMonth();
+function emptyState(): PlanState {
   return {
-    profile: demoProfile(),
-    goals: demoGoals(startMonth),
-    options: defaultPlanOptions(startMonth),
-    onboarded: true,
+    profile: { openingBalanceMinor: 0, incomes: [], expenses: [] },
+    goals: [],
+    options: {
+      startMonth: currentMonth(),
+      horizonMonths: DEFAULT_HORIZON_MONTHS,
+      strategy: "priority",
+      reserveMinor: 0,
+    },
   };
-}
-
-function loadState(): PersistedState {
-  if (typeof window === "undefined") return demoState();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return demoState();
-    const parsed = JSON.parse(raw) as Partial<PersistedState>;
-    if (!parsed.profile || !parsed.goals || !parsed.options) return demoState();
-    return {
-      profile: parsed.profile,
-      goals: parsed.goals,
-      options: parsed.options,
-      onboarded: parsed.onboarded ?? true,
-    };
-  } catch {
-    return demoState();
-  }
 }
 
 interface PlanContextValue {
@@ -81,60 +75,74 @@ interface PlanContextValue {
   options: PlanOptions;
   plan: PlanResult;
   solo: Record<string, string | null>;
-  insights: Insight[];
-  onboarded: boolean;
   hydrated: boolean;
+
+  /** Set when a mutation fails. Rendered once, at the layout level. */
+  error: string | null;
+  dismissError: () => void;
 
   updateProfile: (
     patch: Partial<Pick<FinancialProfile, "openingBalanceMinor">>,
-  ) => void;
+  ) => Promise<void>;
 
-  addIncome: (income: Omit<IncomeSource, "id">) => void;
-  updateIncome: (id: string, patch: Partial<Omit<IncomeSource, "id">>) => void;
-  removeIncome: (id: string) => void;
+  addIncome: (income: Omit<IncomeSource, "id">) => Promise<IncomeSource>;
+  updateIncome: (id: string, patch: Partial<Omit<IncomeSource, "id">>) => Promise<void>;
+  removeIncome: (id: string) => Promise<void>;
 
-  addExpense: (expense: Omit<Expense, "id">) => void;
-  updateExpense: (id: string, patch: Partial<Omit<Expense, "id">>) => void;
-  removeExpense: (id: string) => void;
+  addExpense: (expense: Omit<Expense, "id">) => Promise<Expense>;
+  updateExpense: (id: string, patch: Partial<Omit<Expense, "id">>) => Promise<void>;
+  removeExpense: (id: string) => Promise<void>;
 
-  addGoal: (goal: Omit<Goal, "id">) => Goal;
-  updateGoal: (id: string, patch: Partial<Omit<Goal, "id">>) => void;
-  removeGoal: (id: string) => void;
+  addGoal: (goal: Omit<Goal, "id">) => Promise<Goal>;
+  updateGoal: (id: string, patch: Partial<Omit<Goal, "id">>) => Promise<void>;
+  removeGoal: (id: string) => Promise<void>;
 
-  setStrategy: (strategy: AllocationStrategy) => void;
-  setReserve: (amountMinor: number) => void;
-
-  resetToDemo: () => void;
-  markOnboarded: () => void;
+  /** Reloads everything from the server. Also what a failed mutation leaves in sync. */
+  refresh: () => Promise<void>;
 }
 
 const PlanContext = React.createContext<PlanContextValue | null>(null);
 
 export function PlanProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = React.useState<PersistedState>(demoState);
+  const [state, setState] = React.useState<PlanState>(emptyState);
   const [hydrated, setHydrated] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  // The demo state above is deterministic enough to render on the server,
-  // then replaced with whatever the visitor last saved once we can read
-  // localStorage, so there is no mismatch on hydration.
-  React.useEffect(() => {
-    // localStorage does not exist on the server, so the saved state can only
-    // be read after mount — this is the hydration swap the comment above
-    // describes, not state derivable during render.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setState(loadState());
-    setHydrated(true);
+  const load = React.useCallback(async () => {
+    try {
+      const [settings, incomes, expenses, goals] = await Promise.all([
+        apiFetch<ProfileSettings>("/api/profile"),
+        apiFetch<IncomeSource[]>("/api/incomes"),
+        apiFetch<Expense[]>("/api/expenses"),
+        apiFetch<Goal[]>("/api/goals"),
+      ]);
+      setState({
+        profile: {
+          openingBalanceMinor: settings.openingBalanceMinor,
+          incomes,
+          expenses,
+        },
+        goals,
+        options: {
+          startMonth: currentMonth(),
+          horizonMonths: DEFAULT_HORIZON_MONTHS,
+          strategy: settings.allocationStrategy,
+          reserveMinor: settings.reserveMinor,
+        },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load your plan.");
+    } finally {
+      setHydrated(true);
+    }
   }, []);
 
   React.useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      // Storage can be unavailable (private browsing, quota). The session
-      // still works, it just will not persist across reloads.
-    }
-  }, [state, hydrated]);
+    // Syncs from the server on mount — an external system, not state derivable
+    // during render, so this is exactly what an effect is for.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   const plan = React.useMemo(
     () => buildPlan(state.profile, state.goals, state.options),
@@ -146,14 +154,18 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     [state.profile, state.goals, state.options],
   );
 
-  const insights = React.useMemo(
-    () => buildInsights({ profile: state.profile, goals: state.goals, plan, solo }),
-    [state.profile, state.goals, plan, solo],
-  );
-
   const value = React.useMemo<PlanContextValue>(() => {
-    const patchProfile = (updater: (profile: FinancialProfile) => FinancialProfile) =>
-      setState((prev) => ({ ...prev, profile: updater(prev.profile) }));
+    /** Runs a mutation, surfacing a failure as the shared banner before rethrowing. */
+    async function run<T>(promise: Promise<T>): Promise<T> {
+      try {
+        return await promise;
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Something went wrong. Try again.",
+        );
+        throw err;
+      }
+    }
 
     return {
       profile: state.profile,
@@ -161,69 +173,137 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       options: state.options,
       plan,
       solo,
-      insights,
-      onboarded: state.onboarded,
       hydrated,
+      error,
+      dismissError: () => setError(null),
 
-      updateProfile: (patch) => patchProfile((profile) => ({ ...profile, ...patch })),
+      updateProfile: (patch) =>
+        run(
+          apiFetch<ProfileSettings>("/api/profile", {
+            method: "PATCH",
+            body: JSON.stringify(patch),
+          }),
+        ).then((settings) => {
+          setState((prev) => ({
+            ...prev,
+            profile: {
+              ...prev.profile,
+              openingBalanceMinor: settings.openingBalanceMinor,
+            },
+          }));
+        }),
 
       addIncome: (income) =>
-        patchProfile((profile) => ({
-          ...profile,
-          incomes: [...profile.incomes, { ...income, id: newId("income") }],
-        })),
+        run(
+          apiFetch<IncomeSource>("/api/incomes", {
+            method: "POST",
+            body: JSON.stringify(income),
+          }),
+        ).then((created) => {
+          setState((prev) => ({
+            ...prev,
+            profile: { ...prev.profile, incomes: [...prev.profile.incomes, created] },
+          }));
+          return created;
+        }),
       updateIncome: (id, patch) =>
-        patchProfile((profile) => ({
-          ...profile,
-          incomes: profile.incomes.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-        })),
+        run(
+          apiFetch<IncomeSource>(`/api/incomes/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify(patch),
+          }),
+        ).then((updated) => {
+          setState((prev) => ({
+            ...prev,
+            profile: {
+              ...prev.profile,
+              incomes: prev.profile.incomes.map((i) => (i.id === id ? updated : i)),
+            },
+          }));
+        }),
       removeIncome: (id) =>
-        patchProfile((profile) => ({
-          ...profile,
-          incomes: profile.incomes.filter((i) => i.id !== id),
-        })),
+        run(apiFetch<null>(`/api/incomes/${id}`, { method: "DELETE" })).then(() => {
+          setState((prev) => ({
+            ...prev,
+            profile: {
+              ...prev.profile,
+              incomes: prev.profile.incomes.filter((i) => i.id !== id),
+            },
+          }));
+        }),
 
       addExpense: (expense) =>
-        patchProfile((profile) => ({
-          ...profile,
-          expenses: [...profile.expenses, { ...expense, id: newId("expense") }],
-        })),
+        run(
+          apiFetch<Expense>("/api/expenses", {
+            method: "POST",
+            body: JSON.stringify(expense),
+          }),
+        ).then((created) => {
+          setState((prev) => ({
+            ...prev,
+            profile: { ...prev.profile, expenses: [...prev.profile.expenses, created] },
+          }));
+          return created;
+        }),
       updateExpense: (id, patch) =>
-        patchProfile((profile) => ({
-          ...profile,
-          expenses: profile.expenses.map((e) => (e.id === id ? { ...e, ...patch } : e)),
-        })),
+        run(
+          apiFetch<Expense>(`/api/expenses/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify(patch),
+          }),
+        ).then((updated) => {
+          setState((prev) => ({
+            ...prev,
+            profile: {
+              ...prev.profile,
+              expenses: prev.profile.expenses.map((e) => (e.id === id ? updated : e)),
+            },
+          }));
+        }),
       removeExpense: (id) =>
-        patchProfile((profile) => ({
-          ...profile,
-          expenses: profile.expenses.filter((e) => e.id !== id),
-        })),
+        run(apiFetch<null>(`/api/expenses/${id}`, { method: "DELETE" })).then(() => {
+          setState((prev) => ({
+            ...prev,
+            profile: {
+              ...prev.profile,
+              expenses: prev.profile.expenses.filter((e) => e.id !== id),
+            },
+          }));
+        }),
 
-      addGoal: (goal) => {
-        const created: Goal = { ...goal, id: newId("goal") };
-        setState((prev) => ({ ...prev, goals: [...prev.goals, created] }));
-        return created;
-      },
+      addGoal: (goal) =>
+        run(
+          apiFetch<Goal>("/api/goals", {
+            method: "POST",
+            body: JSON.stringify(goal),
+          }),
+        ).then((created) => {
+          setState((prev) => ({ ...prev, goals: [...prev.goals, created] }));
+          return created;
+        }),
       updateGoal: (id, patch) =>
-        setState((prev) => ({
-          ...prev,
-          goals: prev.goals.map((g) => (g.id === id ? { ...g, ...patch } : g)),
-        })),
+        run(
+          apiFetch<Goal>(`/api/goals/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify(patch),
+          }),
+        ).then((updated) => {
+          setState((prev) => ({
+            ...prev,
+            goals: prev.goals.map((g) => (g.id === id ? updated : g)),
+          }));
+        }),
       removeGoal: (id) =>
-        setState((prev) => ({ ...prev, goals: prev.goals.filter((g) => g.id !== id) })),
+        run(apiFetch<null>(`/api/goals/${id}`, { method: "DELETE" })).then(() => {
+          setState((prev) => ({
+            ...prev,
+            goals: prev.goals.filter((g) => g.id !== id),
+          }));
+        }),
 
-      setStrategy: (strategy) =>
-        setState((prev) => ({ ...prev, options: { ...prev.options, strategy } })),
-      setReserve: (amountMinor) =>
-        setState((prev) => ({
-          ...prev,
-          options: { ...prev.options, reserveMinor: Math.max(0, amountMinor) },
-        })),
-
-      resetToDemo: () => setState(demoState()),
-      markOnboarded: () => setState((prev) => ({ ...prev, onboarded: true })),
+      refresh: load,
     };
-  }, [state, plan, solo, insights, hydrated]);
+  }, [state, plan, solo, hydrated, error, load]);
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }
