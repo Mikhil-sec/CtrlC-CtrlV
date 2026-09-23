@@ -3,51 +3,59 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --surface: #f8fafc;
+  --background: #fffdf9;
+  --surface: #f6f2ea;
   --surface-raised: #ffffff;
-  --border: #e2e8f0;
-  --foreground: #0f172a;
-  --muted: #64748b;
+  --border: #e6ded0;
+  --foreground: #201a2e;
+  --muted: #766f80;
 
-  --accent: #0f766e;
-  --accent-foreground: #f0fdfa;
-  --accent-soft: #ccfbf1;
+  --accent: #4f3ff0;
+  --accent-foreground: #f5f3ff;
+  --accent-soft: #ece9fe;
+
+  --accent-secondary: #c2720a;
+  --accent-secondary-foreground: #fffaf0;
+  --accent-secondary-soft: #fbe9cc;
 
   --success: #15803d;
   --success-soft: #dcfce7;
-  --warning: #b45309;
-  --warning-soft: #fef3c7;
+  --warning: #c2410c;
+  --warning-soft: #ffedd5;
   --danger: #b91c1c;
   --danger-soft: #fee2e2;
   --info: #1d4ed8;
   --info-soft: #dbeafe;
 
-  --ring: #0f766e;
+  --ring: #4f3ff0;
 }
 
 .dark {
-  --background: #06090f;
-  --surface: #0b0f17;
-  --surface-raised: #111827;
-  --border: #1f2937;
-  --foreground: #f1f5f9;
-  --muted: #94a3b8;
+  --background: #0b0810;
+  --surface: #14101d;
+  --surface-raised: #1c1627;
+  --border: #2c2438;
+  --foreground: #f4f0e9;
+  --muted: #a89ea9;
 
-  --accent: #2dd4bf;
-  --accent-foreground: #042f2c;
-  --accent-soft: #0f3733;
+  --accent: #a78bfa;
+  --accent-foreground: #1e1033;
+  --accent-soft: #241a3d;
+
+  --accent-secondary: #f4a93a;
+  --accent-secondary-foreground: #2c1a03;
+  --accent-secondary-soft: #3a2a10;
 
   --success: #4ade80;
   --success-soft: #0f2f1c;
-  --warning: #fbbf24;
-  --warning-soft: #3a2a06;
+  --warning: #fb923c;
+  --warning-soft: #3a2410;
   --danger: #f87171;
   --danger-soft: #3a1212;
   --info: #60a5fa;
   --info-soft: #0f2447;
 
-  --ring: #2dd4bf;
+  --ring: #a78bfa;
 }
 
 @theme inline {
@@ -62,6 +70,10 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
 
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-secondary-foreground: var(--accent-secondary-foreground);
+  --color-accent-secondary-soft: var(--accent-secondary-soft);
+
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -75,6 +87,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
 body {
@@ -84,6 +97,14 @@ body {
 
 * {
   border-color: var(--border);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
 }
 
 ::selection {
