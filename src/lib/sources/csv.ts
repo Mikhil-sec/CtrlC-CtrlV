@@ -67,6 +67,9 @@ function parseAmountToMinor(text: string): number | null {
 /** Rejects the file once more than a quarter of its rows fail to parse. */
 function tooManyFailures(total: number, failed: number): boolean {
   if (total === 0) return true;
+  // The floor of 3 below exists to tolerate a couple of bad lines in a small
+  // file, not to wave through a file where every single row failed.
+  if (failed === total) return true;
   return failed > Math.max(3, Math.floor(total * 0.25));
 }
 
