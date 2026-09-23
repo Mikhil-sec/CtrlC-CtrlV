@@ -15,6 +15,11 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
+const fraunces = localFont({
+  src: "./fonts/fraunces.woff2",
+  variable: "--font-fraunces",
+  weight: "400 700",
+});
 
 export const metadata: Metadata = {
   title: "GoalPath",
@@ -43,7 +48,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} bg-background text-foreground font-sans antialiased`}
       >
         {children}
       </body>

@@ -1,122 +1,108 @@
 "use client";
 
-/**
- * A brief, functional walkthrough for a first-time signed-in user — gated by
- * `useOnboarding()`. Deliberately plain: this is what makes a blank
- * dashboard make sense on first sign-in rather than looking broken. The
- * visual pass on this belongs to the round-2 design ticket; the mechanism
- * (open on `shouldShow`, skip, reopen from the header) is what matters here.
- */
-
 import * as React from "react";
-import {
-  LayoutDashboard,
-  Scale,
-  Sliders,
-  Target,
-  Wallet,
-  X,
-} from "lucide-react";
+import { GitCompare, LayoutDashboard, SlidersHorizontal, Target } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/lib/store/onboarding";
+import { cn } from "@/lib/utils";
 
 const STEPS = [
   {
-    icon: Wallet,
-    title: "Add what you earn and spend",
-    description:
-      "Start in Profile — your income and expenses. Everything else is worked out from this, and nothing leaves your account.",
+    icon: LayoutDashboard,
+    title: "Dashboard",
+    body: "See your cashflow at a glance, plus every goal's progress and the insights GoalPath surfaces from your numbers.",
   },
   {
     icon: Target,
-    title: "Set what you're saving for",
-    description:
-      "Add a goal with a target amount and date. GoalPath tells you straight away whether it's reachable.",
+    title: "Goals",
+    body: "Track balance vs. target over time for each goal, and see what it would take to stay on schedule.",
   },
   {
-    icon: LayoutDashboard,
-    title: "Check the dashboard",
-    description:
-      "Your cashflow, your goals' status, and insights that name the actual figure behind them.",
+    icon: SlidersHorizontal,
+    title: "Sandbox",
+    body: "Pull sliders to test what-if scenarios — a bigger contribution, a later target date — and see the plan react live.",
   },
   {
-    icon: Sliders,
-    title: "Try the sandbox",
-    description:
-      "Drag a slider or ask a plain-language question — every goal date updates instantly, nothing is saved until you decide.",
-  },
-  {
-    icon: Scale,
-    title: "See the tradeoffs",
-    description:
-      "Goals share one surplus. The tradeoff view shows what funding one costs the others.",
+    icon: GitCompare,
+    title: "Tradeoffs",
+    body: "Compare funding a goal alone versus splitting it, and see exactly how much sooner shared funding gets you there.",
   },
 ] as const;
 
 export function OnboardingModal() {
   const { shouldShow, dismiss } = useOnboarding();
 
-  React.useEffect(() => {
-    if (!shouldShow) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") dismiss();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [shouldShow, dismiss]);
+  return (
+    <Dialog
+      open={shouldShow}
+      onOpenChange={(open) => {
+        if (!open) dismiss();
+      }}
+      ariaLabel="How GoalPath works"
+    >
+      {/* Mounted fresh each time the dialog opens, so step state always
+          starts at 0 without needing an effect to reset it. */}
+      {shouldShow && <OnboardingSteps dismiss={dismiss} />}
+    </Dialog>
+  );
+}
 
-  if (!shouldShow) return null;
+function OnboardingSteps({ dismiss }: { dismiss: () => void }) {
+  const [step, setStep] = React.useState(0);
+
+  const isLast = step === STEPS.length - 1;
+  const current = STEPS[step];
+  const Icon = current.icon;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="onboarding-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) dismiss();
-      }}
-    >
-      <div className="border-border bg-surface-raised relative flex max-h-[85vh] w-full max-w-md flex-col gap-5 overflow-y-auto rounded-xl border p-6 shadow-lg">
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Close"
-          className="text-muted hover:bg-surface hover:text-foreground absolute top-4 right-4 rounded p-1"
-        >
-          <X className="size-4" />
-        </button>
-
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <span className="bg-accent-soft text-accent flex size-11 items-center justify-center rounded-xl">
+          <Icon className="size-5" />
+        </span>
         <div>
-          <h2 id="onboarding-title" className="text-lg font-semibold tracking-tight">
-            Welcome to GoalPath
-          </h2>
-          <p className="text-muted text-sm">
-            Five things worth knowing before you start.
-          </p>
+          <h2 className="text-xl font-semibold">{current.title}</h2>
+          <p className="text-muted mt-1 text-sm leading-relaxed">{current.body}</p>
         </div>
+      </div>
 
-        <ol className="flex flex-col gap-4">
-          {STEPS.map(({ icon: Icon, title, description }, i) => (
-            <li key={title} className="flex gap-3">
-              <span className="bg-accent-soft text-accent flex size-8 shrink-0 items-center justify-center rounded-full">
-                <Icon className="size-4" />
-              </span>
-              <div>
-                <p className="text-sm font-medium">
-                  {i + 1}. {title}
-                </p>
-                <p className="text-muted text-sm">{description}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+      <div className="flex items-center justify-center gap-1.5">
+        {STEPS.map((s, i) => (
+          <span
+            key={s.title}
+            className={cn(
+              "h-1.5 rounded-full transition-all",
+              i === step ? "bg-accent w-6" : "bg-border w-1.5",
+            )}
+          />
+        ))}
+      </div>
 
-        <div className="flex items-center gap-2 pt-1">
-          <Button onClick={dismiss}>Got it</Button>
-          <Button variant="ghost" onClick={dismiss}>
-            Skip
-          </Button>
+      <div className="flex items-center justify-between gap-3">
+        <Button variant="ghost" size="sm" onClick={dismiss}>
+          Skip
+        </Button>
+
+        <div className="flex items-center gap-2">
+          {step > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+            >
+              Back
+            </Button>
+          )}
+          {isLast ? (
+            <Button size="sm" onClick={dismiss}>
+              Got it
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setStep((s) => s + 1)}>
+              Next
+            </Button>
+          )}
         </div>
       </div>
     </div>

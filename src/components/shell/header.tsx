@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { HelpCircle, LogOut, Menu, Wallet, X } from "lucide-react";
+import { CircleHelp, LogOut, Menu, Wallet, X } from "lucide-react";
 import { NavLinks } from "@/components/shell/nav-links";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -38,7 +38,7 @@ export function Header({ user }: { user: HeaderUser | null }) {
               aria-label="How this works"
               onClick={reopen}
             >
-              <HelpCircle className="size-4" />
+              <CircleHelp className="size-4" />
             </Button>
           )}
           <ThemeToggle />
