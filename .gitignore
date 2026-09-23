@@ -54,3 +54,6 @@ CLAUDE.md
 
 # team handoff briefs, kept out of the graded repository
 /handoff/
+
+.vercel
+.env*
