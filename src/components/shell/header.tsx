@@ -2,13 +2,21 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Menu, Wallet, X } from "lucide-react";
+import { HelpCircle, LogOut, Menu, Wallet, X } from "lucide-react";
 import { NavLinks } from "@/components/shell/nav-links";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { signOutAction } from "@/lib/auth/actions";
+import { useOnboarding } from "@/lib/store/onboarding";
 
-export function Header() {
+export interface HeaderUser {
+  name: string | null;
+  image: string | null;
+}
+
+export function Header({ user }: { user: HeaderUser | null }) {
   const [open, setOpen] = React.useState(false);
+  const { reopen } = useOnboarding();
 
   return (
     <header className="border-border bg-background/85 sticky top-0 z-40 border-b backdrop-blur">
@@ -23,7 +31,32 @@ export function Header() {
         <NavLinks className="hidden items-center gap-1 md:flex" />
 
         <div className="flex items-center gap-1">
+          {user && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="How this works"
+              onClick={reopen}
+            >
+              <HelpCircle className="size-4" />
+            </Button>
+          )}
           <ThemeToggle />
+          {user ? (
+            <form action={signOutAction}>
+              <Button variant="ghost" size="sm" type="submit">
+                <LogOut className="size-4" />
+                <span className="hidden sm:inline">Sign out</span>
+              </Button>
+            </form>
+          ) : (
+            <Link
+              href="/sign-in"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              Sign in
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="icon"
