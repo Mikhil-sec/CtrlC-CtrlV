@@ -2,13 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Menu, Wallet, X } from "lucide-react";
+import { CircleHelp, Menu, Wallet, X } from "lucide-react";
 import { NavLinks } from "@/components/shell/nav-links";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { useOnboarding } from "@/lib/onboarding/use-onboarding";
 
 export function Header() {
   const [open, setOpen] = React.useState(false);
+  const { reopen } = useOnboarding();
 
   return (
     <header className="border-border bg-background/85 sticky top-0 z-40 border-b backdrop-blur">
@@ -23,6 +25,14 @@ export function Header() {
         <NavLinks className="hidden items-center gap-1 md:flex" />
 
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="How this works"
+            onClick={reopen}
+          >
+            <CircleHelp className="size-4" />
+          </Button>
           <ThemeToggle />
           <Button
             variant="ghost"
