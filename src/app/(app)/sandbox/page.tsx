@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { RotateCcw, Undo2, X } from "lucide-react";
-import { Assistant } from "@/components/sandbox/assistant";
+import { Assistant, type NewGoal } from "@/components/sandbox/assistant";
 import { GoalDates } from "@/components/sandbox/goal-dates";
 import { ScenarioDelta } from "@/components/sandbox/scenario-delta";
 import { SliderRow } from "@/components/sandbox/slider-row";
@@ -20,6 +20,10 @@ import {
   buildPlan,
   defaultSimulationOptions,
   diffPlans,
+  formatDelta,
+  formatMoney,
+  monthlyChangeOf,
+  monthlyEquivalent,
   simulate,
 } from "@/lib/engine";
 import {
@@ -90,6 +94,11 @@ function between(from: SandboxState, to: SandboxState, t: number): SandboxState 
   };
 }
 
+/** A monthly rupee change, as shown beside a slider: "+Rs 4,500/mo". */
+function perMonth(amountMinor: number): string {
+  return `${formatDelta(amountMinor)}/mo`;
+}
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -98,7 +107,7 @@ function prefersReducedMotion(): boolean {
 }
 
 export default function SandboxPage() {
-  const { profile, goals, options, plan, confidence, hydrated } = usePlan();
+  const { profile, goals, options, plan, confidence, hydrated, addGoal } = usePlan();
   const { consumePendingScenario } = useSandboxScenario();
   const { userId } = useAppSession();
 
@@ -186,6 +195,38 @@ export default function SandboxPage() {
     [commit, profile],
   );
 
+  /**
+   * Makes a goal the assistant tried in the sandbox a real one, and takes the
+   * trial copy out of the sandbox so it is not counted twice.
+   */
+  const saveGoal = React.useCallback(
+    async (goal: NewGoal) => {
+      await addGoal({
+        name: goal.name,
+        targetMinor: goal.targetMinor,
+        savedMinor: 0,
+        targetDate: goal.targetDate,
+        priority: Math.max(0, ...goals.map((g) => g.priority)) + 1,
+        category: goal.category ?? "other",
+      });
+      const extras = target.current.extras;
+      if (!extras) return;
+      const rest = extras.adjustments.filter(
+        (a) =>
+          !(
+            a.type === "add_goal" &&
+            a.name === goal.name &&
+            a.targetMinor === goal.targetMinor
+          ),
+      );
+      edit((prev) => ({
+        ...prev,
+        extras: rest.length > 0 ? { ...extras, adjustments: rest } : null,
+      }));
+    },
+    [addGoal, goals, edit],
+  );
+
   React.useEffect(() => {
     if (!hydrated) return;
     // A dashboard insight's "Try this" hands a scenario over; it lands on the
@@ -227,6 +268,22 @@ export default function SandboxPage() {
     [profile.expenses],
   );
 
+  // What each category costs in an average month now, for the slider labels.
+  const categoryMonthly = React.useMemo(() => {
+    const totals: Partial<Record<ExpenseCategory, number>> = {};
+    for (const expense of profile.expenses) {
+      totals[expense.category] =
+        (totals[expense.category] ?? 0) + monthlyEquivalent(expense);
+    }
+    return totals;
+  }, [profile.expenses]);
+
+  const incomeMonthly = React.useMemo(
+    () =>
+      profile.incomes.reduce((total, income) => total + monthlyEquivalent(income), 0),
+    [profile.incomes],
+  );
+
   const adjustments = React.useMemo(
     () => adjustmentsFromSandbox(sandbox, goals, options.strategy),
     [sandbox, goals, options.strategy],
@@ -253,8 +310,8 @@ export default function SandboxPage() {
   );
 
   const delta = React.useMemo(
-    () => diffPlans(plan, projected, goals),
-    [plan, projected, goals],
+    () => diffPlans(plan, projected, goals, changedInputs.goals),
+    [plan, projected, goals, changedInputs.goals],
   );
 
   // The simulation is the one expensive thing on this page, so it waits for
@@ -356,8 +413,16 @@ export default function SandboxPage() {
             <CardContent>
               <SliderRow
                 label="All income sources"
-                sublabel="Salary, bonus and freelance together"
+                sublabel={`Salary, bonus and freelance together · ${formatMoney(incomeMonthly)} a month now`}
                 value={sandbox.incomePercent}
+                // The engine's own arithmetic, so the rupees always agree with
+                // the projection on the right.
+                amount={perMonth(
+                  monthlyChangeOf(profile, {
+                    type: "adjust_income",
+                    byPercent: sandbox.incomePercent,
+                  }),
+                )}
                 min={-50}
                 max={100}
                 touched={touched.has("income")}
@@ -375,7 +440,15 @@ export default function SandboxPage() {
                 <SliderRow
                   key={category}
                   label={CATEGORY_LABEL[category]}
+                  sublabel={`${formatMoney(categoryMonthly[category] ?? 0)} a month now`}
                   value={sandbox.categoryPercents[category] ?? 0}
+                  amount={perMonth(
+                    monthlyChangeOf(profile, {
+                      type: "adjust_expense",
+                      category,
+                      byPercent: sandbox.categoryPercents[category] ?? 0,
+                    }),
+                  )}
                   min={-100}
                   max={100}
                   touched={touched.has(`category:${category}`)}
@@ -447,6 +520,7 @@ export default function SandboxPage() {
             storageKey={`goalpath-chat:${userId ?? "demo"}`}
             activeScenarioId={activeScenarioId}
             onApply={applyScenarioToControls}
+            onSaveGoal={userId ? saveGoal : undefined}
           />
         </div>
       </div>

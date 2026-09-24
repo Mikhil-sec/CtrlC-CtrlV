@@ -18,6 +18,7 @@
 import { scenarioPromptSchema } from "@/lib/contract/schemas";
 import type {
   AssistantReply,
+  GoalCategory,
   GoalSeekResult,
   PlanResult,
   Scenario,
@@ -25,6 +26,7 @@ import type {
 } from "@/lib/contract/types";
 import { compileAssistant } from "@/lib/ai/compile-scenario";
 import { explainPlanChange, headlineFor } from "@/lib/ai/explain";
+import { HELP_REPLY } from "@/lib/ai/fallback";
 import { describeMonth } from "@/lib/ai/prompts";
 import { currentUserId, readableUserId } from "@/lib/auth/guard";
 import { ok, parseBody, RateLimitedError, route } from "@/lib/api";
@@ -36,6 +38,7 @@ import {
   diffPlans,
   formatMoney,
   monthOf,
+  planPurchase,
   solveForGoal,
 } from "@/lib/engine";
 import {
@@ -106,6 +109,116 @@ function describeSeek(seek: GoalSeekResult): string {
     ? ` The gap is about ${formatMoney(seek.extraMonthlyMinor)} a month.`
     : "";
   return `As things stand ${now}, so ${when} needs a change.${gap} I've set the sandbox to the smallest one that works: ${lowerFirst(best.label)}.`;
+}
+
+/** A best guess at the goal's category from its name, for the icon and grouping. */
+function categoryFor(label: string): GoalCategory {
+  const text = label.toLowerCase();
+  if (/trip|travel|holiday|vacation|honeymoon|flight/.test(text)) return "travel";
+  if (/car|bike|scooter|motor|vehicle/.test(text)) return "vehicle";
+  if (/laptop|phone|computer|tablet|console|camera/.test(text)) return "device";
+  if (/house|home|flat|apartment|deposit|renovat/.test(text)) return "home";
+  if (/course|degree|school|study|studies|university|tuition/.test(text))
+    return "education";
+  if (/business|shop|startup/.test(text)) return "business";
+  return "other";
+}
+
+/**
+ * A purchase that is not on the plan yet, answered from projections alone,
+ * and placed in the sandbox as a new goal so its effect on the others shows.
+ */
+function purchaseReply(
+  inputs: PlanInputs,
+  plan: PlanResult,
+  purchase: { label: string; amountMinor: number; targetDate?: string },
+  source: AssistantReply["source"],
+): AssistantReply {
+  const p = planPurchase(inputs.profile, inputs.goals, inputs.options, purchase);
+  const amount = formatMoney(p.amountMinor);
+  const needed = formatMoney(p.monthlyNeededMinor);
+  const by = p.targetMonth ? shortMonth(p.targetMonth) : null;
+  const headline = `${p.label}: ${amount}`;
+  const sentences: string[] = [];
+
+  if (p.targetMonth && p.targetMonth < plan.startMonth) {
+    return {
+      kind: "answer",
+      source,
+      headline,
+      text: `${describeMonth(p.targetMonth)} has already passed. Pick a month from ${describeMonth(plan.startMonth)} onwards.`,
+    };
+  }
+
+  // The date the goal is given: theirs if they named one, otherwise when the
+  // engine says it would actually land behind the goals already there.
+  const dueMonth =
+    p.targetMonth ??
+    p.queuedMonth ??
+    (p.monthsAtSurplus
+      ? addMonths(plan.startMonth, p.monthsAtSurplus - 1)
+      : addMonths(plan.startMonth, p.monthsToTarget - 1));
+
+  if (p.surplusMinor <= 0) {
+    sentences.push(
+      `${amount} for ${p.label} would need about ${needed} a month${by ? ` to have it by ${by}` : " to have it within a year"}, but right now your spending uses up all of your income.`,
+      "Free up a monthly surplus first — try cutting a category in the sliders.",
+    );
+  } else {
+    const years = (p.monthsAtSurplus! / 12).toFixed(1);
+    const ready = p.soloMonth
+      ? `would be ready in ${shortMonth(p.soloMonth)}${p.monthsAtSurplus! > 24 ? ` — about ${years} years` : ""}`
+      : `would take about ${p.monthsAtSurplus} months (${years} years)`;
+    sentences.push(
+      `Your monthly surplus is ${formatMoney(p.surplusMinor)}. If all of it went to ${p.label}, ${amount} ${ready}.`,
+    );
+
+    if (inputs.goals.length > 0) {
+      const count = `${inputs.goals.length} current goal${inputs.goals.length === 1 ? "" : "s"}`;
+      sentences.push(
+        p.queuedMonth
+          ? `Saved after your ${count}, it lands in ${shortMonth(p.queuedMonth)}${p.goalsDelayed > 0 ? `, and ${p.goalsDelayed} of them would slip` : ""}.`
+          : `Behind your ${count}, it isn't reached within twenty years.`,
+      );
+    }
+
+    const gap = p.monthlyNeededMinor - p.surplusMinor;
+    sentences.push(
+      by
+        ? `Having it by ${by} takes ${needed} a month over ${p.monthsToTarget} months${gap > 0 ? ` — ${formatMoney(gap)} more than your whole surplus` : ""}.`
+        : `To have it within a year you'd set aside ${needed} a month${gap > 0 ? `, ${formatMoney(gap)} more than your surplus` : ""}.`,
+    );
+  }
+
+  sentences.push(
+    `I've added it to the sandbox as a goal for ${shortMonth(dueMonth)} so you can see what it does to the others — save it to keep it.`,
+  );
+
+  const scenario: Scenario = {
+    id: crypto.randomUUID(),
+    label: `New goal: ${p.label}`,
+    summary: `Add ${p.label} (${amount}) as a goal for ${shortMonth(dueMonth)}`,
+    adjustments: [
+      {
+        type: "add_goal",
+        name: p.label,
+        targetMinor: p.amountMinor,
+        targetDate: `${dueMonth}-28`,
+        category: categoryFor(p.label),
+      },
+    ],
+  };
+  const applied = applyScenario(inputs.profile, inputs.goals, inputs.options, scenario);
+  const projected = buildPlan(applied.profile, applied.goals, applied.options);
+
+  return {
+    kind: "scenario",
+    source,
+    headline,
+    text: sentences.join(" "),
+    scenario,
+    delta: diffPlans(plan, projected, inputs.goals, applied.goals),
+  };
 }
 
 function goalSeekReply(
@@ -203,6 +316,14 @@ export const POST = route(async (request) => {
   );
   if (note) console.info("Assistant used the rules path:", note);
 
+  if (compiled.intent === "plan_purchase") {
+    return ok<AssistantReply>(
+      compiled.purchase
+        ? purchaseReply(inputs, plan, compiled.purchase, source)
+        : { kind: "answer", source, text: HELP_REPLY },
+    );
+  }
+
   if (compiled.intent === "off_topic" || compiled.intent === "answer") {
     return ok<AssistantReply>({
       kind: compiled.intent,
@@ -264,7 +385,7 @@ export const POST = route(async (request) => {
 
   const applied = applyScenario(profile, goals, options, scenario);
   const projected = buildPlan(applied.profile, applied.goals, applied.options);
-  const delta = diffPlans(plan, projected, goals);
+  const delta = diffPlans(plan, projected, goals, applied.goals);
 
   const explanation = await explainPlanChange(
     scenario,

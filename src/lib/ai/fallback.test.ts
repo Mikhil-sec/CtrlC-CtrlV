@@ -124,6 +124,35 @@ describe("parseIntentFromText", () => {
     ]);
   });
 
+  it("reads saving up for something new as a purchase, in rupees", () => {
+    const intent = parseIntentFromText(
+      "How can I budget 500 000 for a trip in dubai",
+      goals,
+      "2026-09",
+    );
+    expect(intent.intent).toBe("plan_purchase");
+    expect(intent.purchase).toEqual({
+      label: "Trip in dubai",
+      amountMinor: 50_000_000,
+    });
+  });
+
+  it("understands 80k and a named date on a purchase", () => {
+    const intent = parseIntentFromText(
+      "can I afford a car for 80k by december",
+      goals,
+      "2026-09",
+    );
+    expect(intent.intent).toBe("plan_purchase");
+    expect(intent.purchase?.amountMinor).toBe(8_000_000);
+    expect(intent.purchase?.targetDate).toBe("2026-12-31");
+  });
+
+  it("does not mistake a spending cut for a purchase", () => {
+    const intent = parseIntentFromText("cut my car costs by 2000", goals, "2026-09");
+    expect(intent.intent).toBe("scenario");
+  });
+
   it("points a money question it cannot read at what it can", () => {
     const intent = parseIntentFromText("should I save more?", goals, "2026-09");
     expect(intent.intent).toBe("answer");

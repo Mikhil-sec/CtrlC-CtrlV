@@ -81,9 +81,22 @@ function findPercent(text: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
-/** Picks out a rupee amount, ignoring any number that was part of a percentage. */
+/** "500k", "5 lakh", "1.2 million": a number with a multiplier word after it. */
+const SCALED_AMOUNT = /(\d+(?:\.\d+)?)\s*(k|lakhs?|lacs?|m|million)\b/;
+const SCALE: Record<string, number> = { k: 1_000, m: 1_000_000, million: 1_000_000 };
+
+/**
+ * Picks out a rupee amount, ignoring any number that was part of a percentage.
+ * A bare number is taken as rupees, since that is the only currency here.
+ */
 function findAmountMinor(text: string): number | null {
   const withoutPercents = text.replace(/\d{1,3}\s*(?:%|percent|per cent)/g, " ");
+  const scaled = SCALED_AMOUNT.exec(withoutPercents);
+  if (scaled) {
+    const unit = scaled[2];
+    const factor = SCALE[unit] ?? 100_000; // lakh
+    return Math.round(Number(scaled[1]) * factor * 100);
+  }
   const match = /(?:rs\.?|rupees?)?\s*(\d[\d,\s]{2,}(?:\.\d{1,2})?)/.exec(
     withoutPercents,
   );
@@ -337,13 +350,50 @@ export function findTargetDate(
   return null;
 }
 
+/** Words that mark saving up for something, rather than changing the budget. */
+const PURCHASE_WORDS = [
+  "trip",
+  "travel",
+  "holiday",
+  "vacation",
+  "honeymoon",
+  "wedding",
+  "buy",
+  "purchase",
+  "afford",
+  "budget for",
+  "budget ",
+  "save for",
+  "saving for",
+  "save up",
+  "car",
+  "house",
+  "deposit",
+  "laptop",
+  "phone",
+];
+
+/**
+ * What the thing is called: "for a trip in dubai" -> "Trip in dubai". Falls
+ * back to a neutral name rather than guessing.
+ */
+function purchaseLabel(text: string): string {
+  const match = /\bfor (?:a |an |the |my |our )?([a-z][a-z' -]{1,50})/.exec(text);
+  const raw = match?.[1]
+    .replace(/\s+(?:by|before|until|in \d{4}|next|this|within)\b.*$/, "")
+    .trim();
+  if (!raw) return "This purchase";
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 /** The shape `compiledAssistantSchema` validates, produced without a model. */
 export interface RuledIntent {
-  intent: "scenario" | "goal_seek" | "answer" | "off_topic";
+  intent: "scenario" | "goal_seek" | "answer" | "off_topic" | "plan_purchase";
   label: string;
   summary: string;
   adjustments: ScenarioAdjustment[];
   goal?: { goalId: string; targetDate?: string; monthsEarlier?: number };
+  purchase?: { label: string; amountMinor: number; targetDate?: string };
   reply?: string;
 }
 
@@ -378,6 +428,28 @@ export function parseIntentFromText(
         },
       };
     }
+  }
+
+  // An amount to save up for, not a change to the budget: "how can I budget
+  // 500 000 for a trip in dubai", "can I afford a Rs 80k laptop".
+  const amountMinor = findAmountMinor(text);
+  if (
+    amountMinor &&
+    includesAny(text, PURCHASE_WORDS) &&
+    !includesAny(text, INFLOW_WORDS) &&
+    // "cut my car costs by 2000" is a change to spending, not a purchase.
+    !includesAny(text, DECREASE_WORDS) &&
+    findPercent(text) === null
+  ) {
+    const label = purchaseLabel(text);
+    const targetDate = findTargetDate(text, reference);
+    return {
+      intent: "plan_purchase",
+      label,
+      summary: question.trim(),
+      adjustments: [],
+      purchase: { label, amountMinor, ...(targetDate ? { targetDate } : {}) },
+    };
   }
 
   const scenario = parseScenarioFromText(question);

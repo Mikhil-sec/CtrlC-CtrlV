@@ -10,6 +10,7 @@ export function SliderRow({
   step = 1,
   onChange,
   formatValue,
+  amount,
   touched = false,
 }: {
   label: string;
@@ -20,6 +21,8 @@ export function SliderRow({
   step?: number;
   onChange: (next: number) => void;
   formatValue?: (value: number) => string;
+  /** What the percentage comes to in rupees, shown beside it. */
+  amount?: string;
   /** Briefly highlights the row, when the assistant has just moved it. */
   touched?: boolean;
 }) {
@@ -44,6 +47,9 @@ export function SliderRow({
               reset
             </button>
           )}
+          {amount && value !== 0 && (
+            <span className="text-muted text-xs tabular-nums">{amount}</span>
+          )}
           <span
             className={cn(
               "min-w-12 text-right tabular-nums",
@@ -66,7 +72,7 @@ export function SliderRow({
         onChange={(e) => onChange(Number(e.target.value))}
         onDoubleClick={() => onChange(0)}
         aria-label={label}
-        aria-valuetext={display}
+        aria-valuetext={amount && value !== 0 ? `${display}, ${amount}` : display}
       />
     </div>
   );

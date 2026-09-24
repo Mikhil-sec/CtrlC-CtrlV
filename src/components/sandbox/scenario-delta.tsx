@@ -65,21 +65,34 @@ export function ScenarioDelta({
               Math.round(before.probabilityByTarget * 100) !==
                 Math.round(after.probabilityByTarget * 100);
 
+            // Where it stands on its own: a new goal has only an "after".
+            const standing = g.added ? g.scenarioFundedMonth : g.baselineFundedMonth;
+
             return (
               <li key={g.goalId} className="flex flex-col gap-1 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-medium">{g.name}</span>
+                    {g.added && (
+                      <span className="bg-accent-soft text-accent shrink-0 rounded px-1.5 text-[10px] font-semibold tracking-wide uppercase">
+                        New
+                      </span>
+                    )}
                     {meta && (
                       <span className={cn("shrink-0 text-xs", meta.text)}>
                         {meta.label}
                       </span>
                     )}
                   </span>
-                  {idle ? (
-                    <span className="text-muted shrink-0 tabular-nums">
-                      {g.baselineFundedMonth
-                        ? `funded ${monthLabel(g.baselineFundedMonth)}`
+                  {idle || g.added ? (
+                    <span
+                      className={cn(
+                        "shrink-0 tabular-nums",
+                        g.added ? "text-foreground font-medium" : "text-muted",
+                      )}
+                    >
+                      {standing
+                        ? `funded ${monthLabel(standing)}`
                         : "not funded within 5 years"}
                     </span>
                   ) : (

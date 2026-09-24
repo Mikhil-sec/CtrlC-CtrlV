@@ -16,6 +16,7 @@ import {
   Check,
   CircleSlash,
   Loader2,
+  Plus,
   Sparkles,
   Trash2,
   WandSparkles,
@@ -30,6 +31,7 @@ import type {
   Goal,
   PlanResult,
   Scenario,
+  ScenarioAdjustment,
 } from "@/lib/contract/types";
 import { monthOf } from "@/lib/engine";
 import { monthLabel, monthLabelLong } from "@/lib/format";
@@ -157,19 +159,85 @@ function OptionButton({
   );
 }
 
+export type NewGoal = Extract<ScenarioAdjustment, { type: "add_goal" }>;
+
+/**
+ * Keeps a goal the assistant only tried in the sandbox. Signed-out visitors
+ * are looking at the demo plan, which is not theirs to change, so they get a
+ * pointer instead of a button.
+ */
+function SaveGoal({
+  goal,
+  goals,
+  onSaveGoal,
+}: {
+  goal: NewGoal;
+  goals: Goal[];
+  onSaveGoal?: (goal: NewGoal) => Promise<void>;
+}) {
+  const [state, setState] = React.useState<"idle" | "saving" | "error">("idle");
+  // Already saved, in this visit or an earlier one: matched by what it is.
+  const saved = goals.some(
+    (g) => g.name === goal.name && g.targetMinor === goal.targetMinor,
+  );
+
+  if (saved) {
+    return (
+      <span className="text-success flex items-center gap-1">
+        <Check className="size-3.5" /> Saved to your goals
+      </span>
+    );
+  }
+  if (!onSaveGoal) {
+    return <span className="text-muted">Sign in to save it as a goal.</span>;
+  }
+
+  return (
+    <span className="flex items-center gap-2">
+      <Button
+        size="sm"
+        disabled={state === "saving"}
+        onClick={async () => {
+          setState("saving");
+          try {
+            await onSaveGoal(goal);
+            setState("idle");
+          } catch {
+            setState("error");
+          }
+        }}
+      >
+        {state === "saving" ? <Loader2 className="animate-spin" /> : <Plus />} Add to my
+        goals
+      </Button>
+      {state === "error" && <span className="text-danger">Couldn&apos;t save it.</span>}
+    </span>
+  );
+}
+
 function AssistantBubble({
   reply,
+  goals,
   activeScenarioId,
   onApply,
+  onSaveGoal,
 }: {
   reply: AssistantReply;
+  goals: Goal[];
   activeScenarioId: string | null;
   onApply: (scenario: Scenario) => void;
+  onSaveGoal?: (goal: NewGoal) => Promise<void>;
 }) {
   const applied =
     reply.kind === "scenario" &&
     reply.scenario &&
     activeScenarioId === reply.scenario.id;
+  const newGoal = reply.scenario?.adjustments.find(
+    (a): a is NewGoal => a.type === "add_goal",
+  );
+  const alreadySaved =
+    newGoal &&
+    goals.some((g) => g.name === newGoal.name && g.targetMinor === newGoal.targetMinor);
 
   return (
     <div className="rise-in flex flex-col gap-2">
@@ -200,8 +268,8 @@ function AssistantBubble({
         )}
 
         {reply.kind === "scenario" && reply.scenario && (
-          <div className="flex items-center justify-between gap-2 pt-1 text-xs">
-            {applied ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+            {alreadySaved ? null : applied ? (
               <span className="text-success flex items-center gap-1">
                 <Check className="size-3.5" /> Showing in the sandbox
               </span>
@@ -213,6 +281,9 @@ function AssistantBubble({
               >
                 <WandSparkles /> Show this again
               </Button>
+            )}
+            {newGoal && (
+              <SaveGoal goal={newGoal} goals={goals} onSaveGoal={onSaveGoal} />
             )}
           </div>
         )}
@@ -227,6 +298,7 @@ export function Assistant({
   storageKey,
   activeScenarioId,
   onApply,
+  onSaveGoal,
 }: {
   goals: Goal[];
   plan: PlanResult;
@@ -234,6 +306,8 @@ export function Assistant({
   storageKey: string;
   activeScenarioId: string | null;
   onApply: (scenario: Scenario) => void;
+  /** Saves a goal the assistant added to the sandbox. Absent when signed out. */
+  onSaveGoal?: (goal: NewGoal) => Promise<void>;
 }) {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [question, setQuestion] = React.useState("");
@@ -426,8 +500,10 @@ export function Assistant({
             <AssistantBubble
               key={message.id}
               reply={message.reply}
+              goals={goals}
               activeScenarioId={activeScenarioId}
               onApply={onApply}
+              onSaveGoal={onSaveGoal}
             />
           ),
         )}

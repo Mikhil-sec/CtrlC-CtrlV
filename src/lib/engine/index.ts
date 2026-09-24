@@ -43,7 +43,13 @@ export {
   soloFundingMonths,
   DEFAULT_HORIZON_MONTHS,
 } from "./project";
-export { applyScenario, diffPlans, type AppliedScenario } from "./scenario";
+export {
+  applyScenario,
+  diffPlans,
+  monthlyChangeOf,
+  type AppliedScenario,
+} from "./scenario";
+export { planPurchase, type PurchasePlan } from "./purchase";
 export {
   simulate,
   defaultSimulationOptions,
