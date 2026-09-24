@@ -8,6 +8,11 @@
  * never signed in (`useAppSession().signedIn` is false for it, since it is
  * served through the read-only fallback in `readableUserId()`, not a real
  * session), so it can never trigger this.
+ *
+ * A context, not a bare hook: the header's "how this works" button and the
+ * modal it reopens are siblings in the tree, not nested, so each needs to
+ * see the same `reopened` flag rather than hold its own copy that the other
+ * never finds out about.
  */
 
 import * as React from "react";
@@ -27,7 +32,22 @@ function storageKey(userId: string): string {
   return `goalpath-onboarded:${userId}`;
 }
 
+const OnboardingContext = React.createContext<OnboardingState | null>(null);
+
+export function OnboardingProvider({ children }: { children: React.ReactNode }) {
+  const value = useOnboardingState();
+  return (
+    <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>
+  );
+}
+
 export function useOnboarding(): OnboardingState {
+  const ctx = React.useContext(OnboardingContext);
+  if (!ctx) throw new Error("useOnboarding must be used within an OnboardingProvider");
+  return ctx;
+}
+
+function useOnboardingState(): OnboardingState {
   const { signedIn, userId } = useAppSession();
   const { hydrated, goals, profile } = usePlan();
   const [dismissed, setDismissed] = React.useState(false);
