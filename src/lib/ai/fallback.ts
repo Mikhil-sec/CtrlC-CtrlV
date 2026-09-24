@@ -14,6 +14,7 @@
 import type {
   Cadence,
   ExpenseCategory,
+  Goal,
   Scenario,
   ScenarioAdjustment,
 } from "@/lib/contract/types";
@@ -231,4 +232,174 @@ export function parseScenarioFromText(question: string): Scenario | null {
     summary: question.trim(),
     adjustments: meaningful,
   };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Intent, without a model                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Words that mark a message as being about money or planning at all. Anything
+ * with none of these, and no goal named in it, is treated as off topic rather
+ * than guessed at.
+ */
+const FINANCE_WORDS = [
+  "afford",
+  "budget",
+  "save",
+  "saving",
+  "spend",
+  "cost",
+  "money",
+  "rs",
+  "rupee",
+  "income",
+  "salary",
+  "earn",
+  "expense",
+  "goal",
+  "fund",
+  "surplus",
+  "debt",
+  "loan",
+  "bonus",
+  "invest",
+  "emergency",
+  "rent",
+  "bill",
+  "plan",
+  "month",
+  "cut",
+  "reduce",
+  "raise",
+  "sooner",
+  "earlier",
+  "deadline",
+  "priority",
+];
+
+/** Short, common words that would match too many goal names to be useful. */
+const GOAL_STOP_WORDS = new Set(["fund", "goal", "new", "the", "for", "my", "and"]);
+
+export const OFF_TOPIC_REPLY =
+  'I can only help with your budget and savings goals here. Try "Can I afford the laptop by March?" or "What if I cut eating out by a third?"';
+
+export const HELP_REPLY =
+  'I read changes and targets best. Try "What if my salary went up 10%?", "Cut eating out by a third", or "Can I have the Japan trip by December?"';
+
+/** The goal a message names, matched on any distinctive word of its name. */
+function findGoal(text: string, goals: Goal[]): Goal | null {
+  for (const goal of goals) {
+    const words = goal.name
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length >= 3 && !GOAL_STOP_WORDS.has(word));
+    if (words.some((word) => new RegExp(`\\b${word}`).test(text))) return goal;
+  }
+  return null;
+}
+
+function lastDay(month: string): string {
+  const [year, m] = month.split("-").map(Number);
+  const day = new Date(Date.UTC(year, m, 0)).getUTCDate();
+  return `${month}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * A target date named in a message: "end of 2026", "by December", "in March
+ * 2027", "next year". Returns the last day of that month, or null.
+ */
+export function findTargetDate(
+  text: string,
+  reference: string = currentMonth(),
+): string | null {
+  const [refYear] = reference.split("-").map(Number);
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const endOf = /\bend of (?:the )?(year|(\d{4}))\b/.exec(text);
+  if (endOf) return lastDay(`${endOf[2] ?? refYear}-12`);
+
+  if (/\bnext year\b/.test(text)) return lastDay(`${refYear + 1}-12`);
+
+  const namedIndex = MONTH_NAMES.findIndex((name) =>
+    new RegExp(`\\b${name}\\b`).test(text),
+  );
+  if (namedIndex !== -1) {
+    const yearMatch = /\b(20\d{2})\b/.exec(text);
+    let year = yearMatch ? Number(yearMatch[1]) : refYear;
+    if (!yearMatch && namedIndex + 1 <= calendarMonth(reference)) year += 1;
+    return lastDay(`${year}-${pad(namedIndex + 1)}`);
+  }
+
+  const bareYear = /\b(?:by|in|before)\s+(20\d{2})\b/.exec(text);
+  if (bareYear) return lastDay(`${bareYear[1]}-12`);
+
+  return null;
+}
+
+/** The shape `compiledAssistantSchema` validates, produced without a model. */
+export interface RuledIntent {
+  intent: "scenario" | "goal_seek" | "answer" | "off_topic";
+  label: string;
+  summary: string;
+  adjustments: ScenarioAdjustment[];
+  goal?: { goalId: string; targetDate?: string; monthsEarlier?: number };
+  reply?: string;
+}
+
+/**
+ * Reads a message's intent with keywords alone.
+ *
+ * Always returns something, because the person always deserves a reply: a
+ * change it recognised, a goal target, a pointer to what it can read, or a
+ * polite refusal.
+ */
+export function parseIntentFromText(
+  question: string,
+  goals: Goal[],
+  reference: string = currentMonth(),
+): RuledIntent {
+  const text = question.toLowerCase().trim();
+  const goal = findGoal(text, goals);
+
+  if (goal) {
+    const sooner = /(\d{1,2})\s*months?\s*(?:earlier|sooner|faster|early)/.exec(text);
+    const targetDate = sooner ? null : findTargetDate(text, reference);
+    if (sooner || targetDate) {
+      return {
+        intent: "goal_seek",
+        label: `${goal.name} sooner`,
+        summary: question.trim(),
+        adjustments: [],
+        goal: {
+          goalId: goal.id,
+          ...(sooner ? { monthsEarlier: Number(sooner[1]) } : {}),
+          ...(targetDate ? { targetDate } : {}),
+        },
+      };
+    }
+  }
+
+  const scenario = parseScenarioFromText(question);
+  if (scenario) {
+    return {
+      intent: "scenario",
+      label: scenario.label,
+      summary: scenario.summary,
+      adjustments: scenario.adjustments,
+    };
+  }
+
+  const aboutMoney =
+    goal !== null || FINANCE_WORDS.some((word) => new RegExp(`\\b${word}`).test(text));
+
+  return aboutMoney
+    ? { intent: "answer", label: "", summary: "", adjustments: [], reply: HELP_REPLY }
+    : {
+        intent: "off_topic",
+        label: "",
+        summary: "",
+        adjustments: [],
+        reply: OFF_TOPIC_REPLY,
+      };
 }

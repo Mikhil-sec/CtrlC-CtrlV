@@ -81,7 +81,7 @@ function useSuggestedInsights(
 }
 
 export default function DashboardPage() {
-  const { plan, goals, hydrated } = usePlan();
+  const { plan, goals, hydrated, confidence } = usePlan();
   const { insights, loading: insightsLoading } = useSuggestedInsights(hydrated, goals);
 
   if (!hydrated) return <DashboardSkeleton />;
@@ -124,7 +124,14 @@ export default function DashboardPage() {
             {plan.goals.map((projection) => {
               const goal = goals.find((g) => g.id === projection.goalId);
               if (!goal) return null;
-              return <GoalCard key={goal.id} goal={goal} projection={projection} />;
+              return (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  projection={projection}
+                  confidence={confidence.find((c) => c.goalId === goal.id)}
+                />
+              );
             })}
           </div>
         )}

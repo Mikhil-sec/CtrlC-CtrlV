@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatMoney } from "@/lib/engine";
+import { addMonths, formatMoney } from "@/lib/engine";
 import { GOAL_STATUS_META } from "@/lib/status";
 import { usePlan } from "@/lib/store/plan-store";
+import { monthLabel } from "@/lib/format";
 
 export default function GoalDetailPage({
   params,
@@ -23,7 +24,7 @@ export default function GoalDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { goals, plan, updateGoal, removeGoal, hydrated } = usePlan();
+  const { goals, plan, confidence, updateGoal, removeGoal, hydrated } = usePlan();
   const [editing, setEditing] = React.useState(false);
   const router = useRouter();
 
@@ -59,6 +60,15 @@ export default function GoalDetailPage({
   }
 
   const meta = GOAL_STATUS_META[projection.status];
+  const odds = confidence.find((c) => c.goalId === id);
+  // The middle 80% of simulated futures: a range worth planning around, where
+  // a single date would pretend to know more than it does.
+  const likelyRange =
+    odds && odds.p10Months !== null && odds.p90Months !== null
+      ? odds.p10Months === odds.p90Months
+        ? monthLabel(addMonths(plan.startMonth, odds.p10Months))
+        : `${monthLabel(addMonths(plan.startMonth, odds.p10Months))} – ${monthLabel(addMonths(plan.startMonth, odds.p90Months))}`
+      : null;
 
   async function handleUpdate(values: GoalFormValues) {
     try {
@@ -160,9 +170,31 @@ export default function GoalDetailPage({
               <div className="flex justify-between">
                 <dt className="text-muted">Funded by</dt>
                 <dd className="font-medium">
-                  {projection.fundedMonth ?? "Beyond 5-year horizon"}
+                  {projection.fundedMonth
+                    ? monthLabel(projection.fundedMonth)
+                    : "Beyond 5-year horizon"}
                 </dd>
               </div>
+              {odds && projection.status !== "achieved" && (
+                <div
+                  className="flex justify-between"
+                  title="Share of 1,000 simulated futures that fund this goal by its deadline"
+                >
+                  <dt className="text-muted">Chance by deadline</dt>
+                  <dd className="font-medium tabular-nums">
+                    {Math.round(odds.probabilityByTarget * 100)}%
+                  </dd>
+                </div>
+              )}
+              {likelyRange && projection.status !== "achieved" && (
+                <div
+                  className="flex justify-between gap-3"
+                  title="Where 80% of simulated futures fund this goal"
+                >
+                  <dt className="text-muted">Likely funded</dt>
+                  <dd className="text-right font-medium tabular-nums">{likelyRange}</dd>
+                </div>
+              )}
               {projection.shortfallMinor > 0 && (
                 <div className="flex justify-between">
                   <dt className="text-muted">Shortfall at deadline</dt>

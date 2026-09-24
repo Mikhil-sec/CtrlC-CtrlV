@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePlan } from "@/lib/store/plan-store";
 
 export default function GoalsPage() {
-  const { plan, goals, addGoal, hydrated } = usePlan();
+  const { plan, goals, addGoal, hydrated, confidence } = usePlan();
   const [adding, setAdding] = React.useState(false);
   const router = useRouter();
 
@@ -90,7 +90,14 @@ export default function GoalsPage() {
             .map((projection) => {
               const goal = goals.find((g) => g.id === projection.goalId);
               if (!goal) return null;
-              return <GoalCard key={goal.id} goal={goal} projection={projection} />;
+              return (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  projection={projection}
+                  confidence={confidence.find((c) => c.goalId === goal.id)}
+                />
+              );
             })}
         </div>
       )}

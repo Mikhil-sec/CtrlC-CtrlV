@@ -55,8 +55,10 @@ export async function explainPlanChange(
   baseline: PlanResult,
   delta: PlanDelta,
   locale: "en" | "fr" = "en",
+  /** False when the daily AI budget is spent, so the template is used. */
+  allowModel = true,
 ): Promise<Explanation> {
-  const provider = await resolveProvider();
+  const provider = allowModel ? await resolveProvider() : null;
   if (!provider) {
     return { text: templateExplanation(scenario, delta), source: "template" };
   }

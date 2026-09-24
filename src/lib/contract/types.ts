@@ -361,3 +361,79 @@ export interface Insight {
   /** When present the UI offers a one-click "try this", which runs the engine. */
   action?: Scenario;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Goal seeking                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The lever a goal-seek option pulls. Each one is a single, explainable
+ * change, so a person can see exactly what they would be signing up for.
+ */
+export type GoalSeekLever = "income" | "spending" | "extra" | "priority";
+
+/** One way of reaching a goal by a given month, verified by the engine. */
+export interface GoalSeekOption {
+  lever: GoalSeekLever;
+  /** Short, imperative: "Earn 18% more". */
+  label: string;
+  /** One sentence on what it costs, including any knock-on effect. */
+  detail: string;
+  /** False when even the most this lever allows does not get there in time. */
+  feasible: boolean;
+  /** The adjustments to apply, including any the search started from. */
+  scenario: Scenario;
+  /** When the goal is funded with this option applied. */
+  fundedMonth: MonthKey | null;
+}
+
+/**
+ * The answer to "what would it take to reach this goal by then?".
+ *
+ * Every option here came out of `buildPlan`, the same as any other figure in
+ * the app. Nothing in it is estimated.
+ */
+export interface GoalSeekResult {
+  goalId: string;
+  goalName: string;
+  targetMonth: MonthKey;
+  /** When the goal is funded before any lever is pulled. */
+  baselineFundedMonth: MonthKey | null;
+  /** True when the goal already makes the target month as things stand. */
+  alreadyOnTrack: boolean;
+  /** The smallest extra monthly surplus that gets there, when one does. */
+  extraMonthlyMinor: Minor | null;
+  options: GoalSeekOption[];
+}
+
+/* -------------------------------------------------------------------------- */
+/* Assistant                                                                  */
+/* -------------------------------------------------------------------------- */
+
+export type AssistantIntent = "scenario" | "goal_seek" | "answer" | "off_topic";
+
+/** One earlier turn of the conversation, as sent back with a follow-up. */
+export interface ConversationTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
+/**
+ * What `/api/ai/scenario` returns.
+ *
+ * `text` is always present, so the client has something to say whatever
+ * happened. The structured parts are what let the sandbox act on the answer
+ * rather than only display it.
+ */
+export interface AssistantReply {
+  kind: AssistantIntent;
+  /** Whether a model read the message, or the keyword fallback did. */
+  source: "model" | "rules";
+  text: string;
+  headline?: string;
+  /** Present for `scenario`: the change, ready to apply to the sandbox. */
+  scenario?: Scenario;
+  delta?: PlanDelta;
+  /** Present for `goal_seek`, and for a scenario that moved a deadline. */
+  seek?: GoalSeekResult;
+}

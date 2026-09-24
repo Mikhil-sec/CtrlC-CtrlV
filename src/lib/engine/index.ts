@@ -52,3 +52,4 @@ export {
   DEFAULT_SEED,
 } from "./simulate";
 export { buildInsights, type InsightContext } from "./insights";
+export { discretionaryCategories, solveForGoal, MAX_INCOME_PERCENT } from "./solve";

@@ -20,6 +20,7 @@ import type {
   Expense,
   FinancialProfile,
   Goal,
+  GoalConfidence,
   IncomeSource,
   PlanOptions,
   PlanResult,
@@ -28,6 +29,8 @@ import {
   buildPlan,
   currentMonth,
   DEFAULT_HORIZON_MONTHS,
+  defaultSimulationOptions,
+  simulate,
   soloFundingMonths,
 } from "@/lib/engine";
 
@@ -75,6 +78,11 @@ interface PlanContextValue {
   options: PlanOptions;
   plan: PlanResult;
   solo: Record<string, string | null>;
+  /**
+   * Odds of making each deadline across 1,000 simulated futures, from the
+   * Monte Carlo engine. Seeded, so the same plan always shows the same odds.
+   */
+  confidence: GoalConfidence[];
   hydrated: boolean;
 
   /** Set when a mutation fails. Rendered once, at the layout level. */
@@ -154,6 +162,13 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     [state.profile, state.goals, state.options],
   );
 
+  const confidence = React.useMemo(
+    () =>
+      simulate(state.profile, state.goals, defaultSimulationOptions(state.options))
+        .goals,
+    [state.profile, state.goals, state.options],
+  );
+
   const value = React.useMemo<PlanContextValue>(() => {
     /** Runs a mutation, surfacing a failure as the shared banner before rethrowing. */
     async function run<T>(promise: Promise<T>): Promise<T> {
@@ -173,6 +188,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       options: state.options,
       plan,
       solo,
+      confidence,
       hydrated,
       error,
       dismissError: () => setError(null),
@@ -303,7 +319,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
 
       refresh: load,
     };
-  }, [state, plan, solo, hydrated, error, load]);
+  }, [state, plan, solo, confidence, hydrated, error, load]);
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }

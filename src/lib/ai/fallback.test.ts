@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { currentMonth } from "@/lib/engine/calendar";
-import { parseScenarioFromText } from "./fallback";
+import { demoGoals } from "@/lib/contract/fixtures";
+import { findTargetDate, parseIntentFromText, parseScenarioFromText } from "./fallback";
 
 describe("parseScenarioFromText", () => {
   it("reads a percentage cut to one category", () => {
@@ -84,5 +85,63 @@ describe("parseScenarioFromText", () => {
 
   it("gives up cleanly on something nonsensical", () => {
     expect(parseScenarioFromText("what is the meaning of life")).toBeNull();
+  });
+});
+
+describe("parseIntentFromText", () => {
+  const goals = demoGoals("2026-09");
+
+  it("declines a question that has nothing to do with money", () => {
+    const intent = parseIntentFromText("who is donald trump", goals, "2026-09");
+    expect(intent.intent).toBe("off_topic");
+    expect(intent.reply).toMatch(/budget and savings goals/);
+  });
+
+  it("reads a goal with a date as a target to work back from", () => {
+    const intent = parseIntentFromText(
+      "I want to go to Japan at the end of 2026",
+      goals,
+      "2026-09",
+    );
+    expect(intent.intent).toBe("goal_seek");
+    expect(intent.goal).toEqual({ goalId: "goal-trip", targetDate: "2026-12-31" });
+  });
+
+  it("reads 'N months sooner' against a named goal", () => {
+    const intent = parseIntentFromText(
+      "how much more do I need to earn to buy the laptop 2 months earlier?",
+      goals,
+      "2026-09",
+    );
+    expect(intent.goal).toEqual({ goalId: "goal-laptop", monthsEarlier: 2 });
+  });
+
+  it("still reads an ordinary change as a scenario", () => {
+    const intent = parseIntentFromText("cut eating out by 30%", goals, "2026-09");
+    expect(intent.intent).toBe("scenario");
+    expect(intent.adjustments).toEqual([
+      { type: "adjust_expense", category: "dining", byPercent: -30 },
+    ]);
+  });
+
+  it("points a money question it cannot read at what it can", () => {
+    const intent = parseIntentFromText("should I save more?", goals, "2026-09");
+    expect(intent.intent).toBe("answer");
+  });
+});
+
+describe("findTargetDate", () => {
+  it("resolves a bare month to its next occurrence", () => {
+    expect(findTargetDate("by march", "2026-09")).toBe("2027-03-31");
+    expect(findTargetDate("by december", "2026-09")).toBe("2026-12-31");
+  });
+
+  it("honours an explicit year and 'next year'", () => {
+    expect(findTargetDate("in june 2028", "2026-09")).toBe("2028-06-30");
+    expect(findTargetDate("sometime next year", "2026-09")).toBe("2027-12-31");
+  });
+
+  it("returns null when no date is named", () => {
+    expect(findTargetDate("soon please", "2026-09")).toBeNull();
   });
 });

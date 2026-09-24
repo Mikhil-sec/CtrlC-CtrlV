@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { monthsBetween } from "@/lib/engine";
 import { usePlan } from "@/lib/store/plan-store";
+import { monthLabel } from "@/lib/format";
 
 export default function ContentionPage() {
   const { goals, plan, solo, hydrated } = usePlan();
@@ -87,9 +88,13 @@ export default function ContentionPage() {
             <TimelineRow
               key={goal.id}
               name={goal.name}
-              soloLabel={soloMonth ?? "not reachable"}
+              soloLabel={soloMonth ? monthLabel(soloMonth) : "not reachable"}
               soloPct={soloIndex === null ? null : (soloIndex / maxIndex) * 100}
-              togetherLabel={projection?.fundedMonth ?? "not reachable"}
+              togetherLabel={
+                projection?.fundedMonth
+                  ? monthLabel(projection.fundedMonth)
+                  : "not reachable"
+              }
               togetherPct={
                 togetherIndex === null ? null : (togetherIndex / maxIndex) * 100
               }

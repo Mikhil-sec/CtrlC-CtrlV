@@ -16,31 +16,41 @@ import type { BadgeProps } from "@/components/ui/badge";
 
 export const GOAL_STATUS_META: Record<
   GoalStatus,
-  { label: string; badge: BadgeProps["variant"]; icon: LucideIcon; ring: string }
+  {
+    label: string;
+    badge: BadgeProps["variant"];
+    icon: LucideIcon;
+    ring: string;
+    text: string;
+  }
 > = {
   achieved: {
     label: "Achieved",
     badge: "success",
     icon: CheckCircle2,
     ring: "border-l-success",
+    text: "text-success",
   },
   on_track: {
     label: "On track",
     badge: "accent",
     icon: CheckCircle2,
     ring: "border-l-accent",
+    text: "text-accent",
   },
   at_risk: {
     label: "At risk",
     badge: "warning",
     icon: AlertTriangle,
     ring: "border-l-warning",
+    text: "text-warning",
   },
   off_track: {
     label: "Off track",
     badge: "danger",
     icon: TrendingDown,
     ring: "border-l-danger",
+    text: "text-danger",
   },
 };
 
