@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -22,9 +22,27 @@ const fraunces = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "GoalPath",
+  title: {
+    default: "GoalPath — can you afford what you're saving for?",
+    template: "%s · GoalPath",
+  },
   description:
     "Work out whether your financial goals are reachable, and what it would take to get there.",
+  applicationName: "GoalPath",
+  openGraph: {
+    title: "GoalPath",
+    description:
+      "Every goal competing for one surplus, a likelihood instead of a false promise, and an assistant that shows you what it would take.",
+    type: "website",
+  },
+};
+
+// Matches the page background, so the browser chrome on phones blends in.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fffdf9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0810" },
+  ],
 };
 
 // Runs before paint so the theme is correct on first render, avoiding a

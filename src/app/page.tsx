@@ -10,8 +10,8 @@ const pillars = [
     body: "Income moves and bills surprise you. Instead of naming a single date, GoalPath simulates a thousand possible years and tells you how many of them reach your goal in time.",
   },
   {
-    title: "Suggestions you can actually run",
-    body: "Advice is only useful if you can check it. Every suggestion here is a change you can apply in one click, with the new dates worked out by the same engine that produced the old ones.",
+    title: "Ask what it would take",
+    body: "Tell it “I want to go to Japan by December” and the sandbox rearranges itself to show you: the smallest spending cut, raise or reshuffle that gets you there, each one checked by the same engine that works out every other date.",
   },
 ];
 

@@ -5,15 +5,19 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatMoney } from "@/lib/engine";
 import { GOAL_STATUS_META } from "@/lib/status";
-import type { Goal, GoalProjection } from "@/lib/contract/types";
+import type { Goal, GoalConfidence, GoalProjection } from "@/lib/contract/types";
 import { cn } from "@/lib/utils";
+import { monthLabel } from "@/lib/format";
 
 export function GoalCard({
   goal,
   projection,
+  confidence,
 }: {
   goal: Goal;
   projection: GoalProjection;
+  /** Monte Carlo odds of making the deadline, when known. */
+  confidence?: GoalConfidence;
 }) {
   const meta = GOAL_STATUS_META[projection.status];
   const Icon = meta.icon;
@@ -49,6 +53,9 @@ export function GoalCard({
             <span>{formatMoney(currentBalance)} saved</span>
             <span>{Math.round(Math.min(100, progressPct))}%</span>
           </div>
+          {confidence && projection.status !== "achieved" && (
+            <OddsBar probability={confidence.probabilityByTarget} />
+          )}
         </div>
 
         <div className="border-border mt-4 flex items-center justify-between border-t pt-3 text-sm">
@@ -56,7 +63,7 @@ export function GoalCard({
             {projection.status === "achieved"
               ? "Fully funded"
               : projection.fundedMonth
-                ? `Funded ${projection.fundedMonth}`
+                ? `Funded ${monthLabel(projection.fundedMonth)}`
                 : "Not funded in range"}
             {projection.shortfallMinor > 0 && (
               <span className="text-danger">
@@ -71,5 +78,30 @@ export function GoalCard({
         </div>
       </Card>
     </Link>
+  );
+}
+
+/**
+ * The share of 1,000 simulated futures that make the deadline. A single date
+ * implies a certainty the inputs do not have; this says how sure to be.
+ */
+function OddsBar({ probability }: { probability: number }) {
+  const pct = Math.round(probability * 100);
+  const tone =
+    pct >= 80
+      ? "text-success"
+      : pct >= 50
+        ? "text-accent"
+        : pct >= 20
+          ? "text-warning"
+          : "text-danger";
+  return (
+    <p
+      className="text-muted text-xs"
+      title="Share of 1,000 simulated futures, with your income and spending varying as they really do, that fund this goal by its deadline"
+    >
+      <span className={cn("font-semibold tabular-nums", tone)}>{pct}%</span> chance of
+      making the deadline
+    </p>
   );
 }

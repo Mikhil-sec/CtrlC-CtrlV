@@ -175,3 +175,19 @@ model Goal {
   @@index([userId])
   @@index([userId, priority])
 }
+
+// -----------------------------------------------------------------------------
+// Abuse protection.
+// -----------------------------------------------------------------------------
+
+// Fixed-window request counters, shared by every server instance. Kept in the
+// database rather than in memory because on serverless hosting each instance
+// has its own memory, which would let a caller multiply their limit by however
+// many instances happened to serve them. Rows expire and are swept lazily.
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}

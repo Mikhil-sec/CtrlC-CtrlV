@@ -249,11 +249,60 @@ export const compiledScenarioSchema = scenarioSchema.omit({ id: true });
 /* AI request payloads                                                        */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Earlier turns of the conversation, so a follow-up like "and what about 20%?"
+ * can be read in context. Capped hard on both count and length: this is text
+ * the client controls, and it goes into a prompt.
+ */
+const conversationTurn = z.object({
+  role: z.enum(["user", "assistant"]),
+  text: z.string().trim().min(1).max(400),
+});
+
 export const scenarioPromptSchema = z.object({
   /** The user's plain-language question, length-capped before it reaches a model. */
-  question: z.string().trim().min(3).max(500),
+  question: z.string().trim().min(2).max(500),
   /** Answers are written back in the language the user is reading the app in. */
   locale: z.enum(["en", "fr"]).default("en"),
+  history: z.array(conversationTurn).max(6).default([]),
+});
+
+/**
+ * What the assistant decided the message was.
+ *
+ * - `scenario`: a change to try ("what if I cut eating out by a third")
+ * - `goal_seek`: a destination to work back from ("Japan by December")
+ * - `answer`: a question about the plan or a money concept, answered in words
+ * - `off_topic`: anything else, politely declined
+ */
+export const assistantIntentSchema = z.enum([
+  "scenario",
+  "goal_seek",
+  "answer",
+  "off_topic",
+]);
+
+/**
+ * The model's reply, before anything is computed from it.
+ *
+ * Looser than `scenarioSchema` on label and summary, because an answer or a
+ * refusal has no scenario to label. The adjustments are held to exactly the
+ * same rules, since they are what reaches the engine.
+ */
+export const compiledAssistantSchema = z.object({
+  intent: assistantIntentSchema,
+  label: z.string().trim().max(80).default(""),
+  summary: z.string().trim().max(280).default(""),
+  adjustments: z.array(scenarioAdjustmentSchema).max(12).default([]),
+  goal: z
+    .object({
+      goalId: z.string(),
+      targetDate: dateKey.optional(),
+      monthsEarlier: z.number().int().min(1).max(120).optional(),
+    })
+    .optional(),
+  /** Prose for `answer` and `off_topic`. Rendered as plain text, never HTML. */
+  reply: z.string().trim().max(700).optional(),
 });
 
 export const explainRequestSchema = z.object({

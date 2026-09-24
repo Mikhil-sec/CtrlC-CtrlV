@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 // The installed lucide-react version dropped brand/logo icons (Github
 // included), so GitBranch stands in as a generic version-control mark.
 import { GitBranch as Github, Wallet } from "lucide-react";
 import { signIn } from "@/auth";
+
+export const metadata: Metadata = { title: "Sign in" };
 
 export default function SignInPage() {
   return (

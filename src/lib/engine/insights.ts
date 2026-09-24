@@ -19,6 +19,7 @@ import type {
 } from "@/lib/contract/types";
 import { discretionaryTotal } from "./cashflow";
 import { formatMoney } from "./money";
+import { monthLabel } from "@/lib/format";
 
 export interface InsightContext {
   profile: FinancialProfile;
@@ -127,7 +128,7 @@ const goalContention: Rule = ({ goals, plan, solo }) => {
     id: "goal-contention",
     severity: "opportunity",
     title: `${goal.name} is reachable, just not alongside the rest`,
-    detail: `On its own ${goal.name} would be funded by ${solo[goal.id]}. Sharing your surplus with your other goals pushes it to ${squeezed.fundedMonth ?? "beyond the horizon"}. Funding the nearest deadline first is one way to change that.`,
+    detail: `On its own ${goal.name} would be funded by ${monthLabel(solo[goal.id]!)}. Sharing your surplus with your other goals pushes it to ${squeezed.fundedMonth ? monthLabel(squeezed.fundedMonth) : "beyond the horizon"}. Funding the nearest deadline first is one way to change that.`,
     concept: "goal_contention",
     action: {
       id: "insight-deadline-first",
