@@ -55,5 +55,8 @@ CLAUDE.md
 # team handoff briefs, kept out of the graded repository
 /handoff/
 
+# Remotion demo-video project, not part of the graded app
+/video/
+
 .vercel
 .env*

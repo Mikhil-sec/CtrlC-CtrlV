@@ -304,6 +304,14 @@ export type ScenarioAdjustment =
       targetMinor?: Minor;
       priority?: number;
     }
+  | {
+      /** A goal that is not on the plan yet, queued behind the existing ones. */
+      type: "add_goal";
+      name: string;
+      targetMinor: Minor;
+      targetDate: DateKey;
+      category?: GoalCategory;
+    }
   | { type: "set_allocation"; strategy: AllocationStrategy }
   | { type: "set_opening_balance"; amountMinor: Minor };
 
@@ -325,6 +333,8 @@ export interface GoalDelta {
   monthsEarlier: number | null;
   baselineShortfallMinor: Minor;
   scenarioShortfallMinor: Minor;
+  /** True for a goal the scenario added, which has no "before" to compare. */
+  added?: boolean;
 }
 
 export interface PlanDelta {

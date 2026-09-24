@@ -159,3 +159,40 @@ describe("diffPlans", () => {
     expect(delta.goals.map((g) => g.name)).toContain("New laptop");
   });
 });
+
+describe("add_goal", () => {
+  const added = scenario({
+    type: "add_goal",
+    name: "Dubai trip",
+    targetMinor: 5_000_000,
+    targetDate: "2029-12-28",
+    category: "travel",
+  });
+
+  it("queues the new goal behind the existing ones", () => {
+    const applied = applyScenario(demoProfile(), demoGoals(START), options, added);
+    const goal = applied.goals.at(-1)!;
+    expect(goal.name).toBe("Dubai trip");
+    expect(goal.savedMinor).toBe(0);
+    expect(goal.priority).toBe(
+      Math.max(...demoGoals(START).map((g) => g.priority)) + 1,
+    );
+  });
+
+  it("appears in the diff as added, with no before", () => {
+    const goals = demoGoals(START);
+    const applied = applyScenario(demoProfile(), goals, options, added);
+    const delta = diffPlans(
+      buildPlan(demoProfile(), goals, options),
+      buildPlan(applied.profile, applied.goals, applied.options),
+      goals,
+      applied.goals,
+    );
+    const row = delta.goals.find((g) => g.added);
+    expect(row?.name).toBe("Dubai trip");
+    expect(row?.baselineFundedMonth).toBeNull();
+    expect(row?.scenarioFundedMonth).not.toBeNull();
+    // The existing goals are all still compared.
+    expect(delta.goals.filter((g) => !g.added)).toHaveLength(goals.length);
+  });
+});

@@ -55,6 +55,39 @@ function matchingExpenses(
   return expenses.filter((expense) => !expense.essential);
 }
 
+/**
+ * What an income or spending adjustment does to an average month, in cents.
+ *
+ * Positive when it adds income or adds spending. It is the same arithmetic the
+ * engine applies — each targeted item changed, then compared at its monthly
+ * equivalent — which is what lets the sandbox show "+10% = +Rs 4,500 a month"
+ * without the rupee figure ever disagreeing with the projection.
+ */
+export function monthlyChangeOf(
+  profile: FinancialProfile,
+  adjustment: Extract<ScenarioAdjustment, { type: "adjust_income" | "adjust_expense" }>,
+): Minor {
+  const targets: Array<IncomeSource | Expense> =
+    adjustment.type === "adjust_income"
+      ? adjustment.incomeId
+        ? profile.incomes.filter((income) => income.id === adjustment.incomeId)
+        : profile.incomes
+      : matchingExpenses(profile.expenses, adjustment);
+
+  return targets.reduce((total, item) => {
+    const next = changed(
+      item.amountMinor,
+      adjustment.byPercent,
+      adjustment.byAmountMinor,
+    );
+    return (
+      total +
+      monthlyEquivalent({ ...item, amountMinor: next }) -
+      monthlyEquivalent(item)
+    );
+  }, 0);
+}
+
 function applyAdjustment(
   state: AppliedScenario,
   adjustment: ScenarioAdjustment,
@@ -72,18 +105,7 @@ function applyAdjustment(
       // A change that starts partway through cannot be folded into the profile,
       // so it becomes a delta running from that month to the end of the horizon.
       if (adjustment.fromMonth && adjustment.fromMonth > 0) {
-        const monthlyChange = targets.reduce((total, income) => {
-          const next = changed(
-            income.amountMinor,
-            adjustment.byPercent,
-            adjustment.byAmountMinor,
-          );
-          return (
-            total +
-            monthlyEquivalent({ ...income, amountMinor: next }) -
-            monthlyEquivalent(income)
-          );
-        }, 0);
+        const monthlyChange = monthlyChangeOf(profile, adjustment);
 
         if (monthlyChange !== 0) {
           deltas.push({
@@ -121,18 +143,7 @@ function applyAdjustment(
       const targets = matchingExpenses(profile.expenses, adjustment);
 
       if (adjustment.fromMonth && adjustment.fromMonth > 0) {
-        const monthlyChange = targets.reduce((total, expense) => {
-          const next = changed(
-            expense.amountMinor,
-            adjustment.byPercent,
-            adjustment.byAmountMinor,
-          );
-          return (
-            total +
-            monthlyEquivalent({ ...expense, amountMinor: next }) -
-            monthlyEquivalent(expense)
-          );
-        }, 0);
+        const monthlyChange = monthlyChangeOf(profile, adjustment);
 
         // Spending less frees cash, so an expense cut is a positive delta.
         if (monthlyChange !== 0) {
@@ -246,6 +257,21 @@ function applyAdjustment(
         ),
       };
 
+    case "add_goal": {
+      const goal: Goal = {
+        id: `scenario-goal-${index}`,
+        name: adjustment.name,
+        targetMinor: adjustment.targetMinor,
+        savedMinor: 0,
+        targetDate: adjustment.targetDate,
+        // Behind everything already there: trying a new goal should show the
+        // queue it joins, not let it jump ahead of plans already made.
+        priority: Math.max(0, ...goals.map((g) => g.priority)) + 1,
+        category: adjustment.category ?? "other",
+      };
+      return { profile, options, goals: [...goals, goal] };
+    }
+
     case "set_allocation":
       return { profile, goals, options: { ...options, strategy: adjustment.strategy } };
 
@@ -287,28 +313,50 @@ export function diffPlans(
   baseline: PlanResult,
   scenario: PlanResult,
   goals: Goal[],
+  /** The scenario's goals, when it may have added some. */
+  scenarioGoals: Goal[] = goals,
 ): PlanDelta {
-  const names = new Map(goals.map((goal) => [goal.id, goal.name]));
+  const names = new Map(
+    [...scenarioGoals, ...goals].map((goal) => [goal.id, goal.name]),
+  );
+  const existing = new Set(baseline.goals.map((g) => g.goalId));
+
+  // A goal the scenario added has no "before": its funded month is the news.
+  const added = scenario.goals
+    .filter((after) => !existing.has(after.goalId))
+    .map((after) => ({
+      goalId: after.goalId,
+      name: names.get(after.goalId) ?? after.goalId,
+      baselineFundedMonth: null,
+      scenarioFundedMonth: after.fundedMonth,
+      monthsEarlier: null,
+      baselineShortfallMinor: after.shortfallMinor,
+      scenarioShortfallMinor: after.shortfallMinor,
+      added: true,
+    }));
 
   return {
     surplusDeltaMinor: scenario.cashflow.surplusMinor - baseline.cashflow.surplusMinor,
-    goals: baseline.goals.map((before) => {
-      const after = scenario.goals.find((g) => g.goalId === before.goalId);
+    goals: [
+      ...baseline.goals.map((before) => {
+        const after = scenario.goals.find((g) => g.goalId === before.goalId);
 
-      const monthsEarlier =
-        before.fundedMonth && after?.fundedMonth
-          ? monthsBetween(after.fundedMonth, before.fundedMonth)
-          : null;
+        const monthsEarlier =
+          before.fundedMonth && after?.fundedMonth
+            ? monthsBetween(after.fundedMonth, before.fundedMonth)
+            : null;
 
-      return {
-        goalId: before.goalId,
-        name: names.get(before.goalId) ?? before.goalId,
-        baselineFundedMonth: before.fundedMonth,
-        scenarioFundedMonth: after?.fundedMonth ?? null,
-        monthsEarlier,
-        baselineShortfallMinor: before.shortfallMinor,
-        scenarioShortfallMinor: after?.shortfallMinor ?? before.shortfallMinor,
-      };
-    }),
+        return {
+          goalId: before.goalId,
+          name: names.get(before.goalId) ?? before.goalId,
+          baselineFundedMonth: before.fundedMonth,
+          scenarioFundedMonth: after?.fundedMonth ?? null,
+          monthsEarlier,
+          baselineShortfallMinor: before.shortfallMinor,
+          scenarioShortfallMinor: after?.shortfallMinor ?? before.shortfallMinor,
+        };
+      }),
+      ...added,
+    ],
   };
 }

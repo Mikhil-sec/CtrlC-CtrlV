@@ -201,6 +201,13 @@ const rawScenarioAdjustmentSchema = z.discriminatedUnion("type", [
     priority: z.number().int().min(1).max(99).optional(),
   }),
   z.object({
+    type: z.literal("add_goal"),
+    name: label,
+    targetMinor: boundedMinor,
+    targetDate: dateKey,
+    category: goalCategory.optional(),
+  }),
+  z.object({
     type: z.literal("set_allocation"),
     strategy: allocationStrategy,
   }),
@@ -283,6 +290,17 @@ export const assistantIntentSchema = z.enum([
 ]);
 
 /**
+ * What a model may answer with, which is one intent wider than what the client
+ * sees: `plan_purchase` ("how do I budget Rs 500 000 for a trip to Dubai") is
+ * something not yet on the plan, which the server works out and replies to as
+ * an `answer`.
+ */
+export const compiledIntentSchema = z.enum([
+  ...assistantIntentSchema.options,
+  "plan_purchase",
+]);
+
+/**
  * The model's reply, before anything is computed from it.
  *
  * Looser than `scenarioSchema` on label and summary, because an answer or a
@@ -290,7 +308,7 @@ export const assistantIntentSchema = z.enum([
  * same rules, since they are what reaches the engine.
  */
 export const compiledAssistantSchema = z.object({
-  intent: assistantIntentSchema,
+  intent: compiledIntentSchema,
   label: z.string().trim().max(80).default(""),
   summary: z.string().trim().max(280).default(""),
   adjustments: z.array(scenarioAdjustmentSchema).max(12).default([]),
@@ -299,6 +317,14 @@ export const compiledAssistantSchema = z.object({
       goalId: z.string(),
       targetDate: dateKey.optional(),
       monthsEarlier: z.number().int().min(1).max(120).optional(),
+    })
+    .optional(),
+  /** For `plan_purchase`: the thing being saved for, which is not a goal yet. */
+  purchase: z
+    .object({
+      label: z.string().trim().min(1).max(60),
+      amountMinor: z.number().int().positive().max(100_000_000_000),
+      targetDate: dateKey.optional(),
     })
     .optional(),
   /** Prose for `answer` and `off_topic`. Rendered as plain text, never HTML. */
