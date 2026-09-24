@@ -100,13 +100,31 @@ move money, which keeps the surface small, but the data is still sensitive.
 - **Everything untrusted is validated at the edge.** Request bodies, uploaded
   CSV rows, and model output all go through `src/lib/contract/schemas.ts`.
   Nothing reaches the engine or the database without passing it.
-- **Model-backed routes are rate limited**, because they draw on a shared
-  free-tier quota that one person holding a button could exhaust.
+- **The assistant is rate limited in layers**: per account, per address, and
+  per anonymous visitor, because it draws on a shared quota that one person
+  holding a button, or one script, could exhaust. The counters live in Postgres
+  (`RateLimit`, one atomic upsert per check), so they hold across serverless
+  instances rather than resetting per instance.
+- **A global daily budget caps what the API key can spend** (`AI_DAILY_BUDGET`,
+  default 1,000 questions). Past it the model is not called at all and the
+  rule-based reader answers, so the app degrades rather than breaks.
+- **Model output is checked against the caller's own data.** Beyond schema
+  validation, any income, expense or goal id a model refers to must belong to
+  the person asking, or the reply is discarded.
+- **Writes are protected at the wrapper.** `route()` in `src/lib/api.ts`
+  refuses cross-site writes (`Origin` / `Sec-Fetch-Site`), rate limits writes
+  per address, caps JSON bodies at 64KB, and marks every response
+  `private, no-store`. CSV uploads are capped at 1MB.
+- **Security headers on every response**: a Content Security Policy whose
+  `connect-src 'self'` means injected code could not send data anywhere, plus
+  HSTS, `frame-ancestors 'none'`, `nosniff`, a strict referrer policy and a
+  locked-down permissions policy. See `next.config.ts`.
 - **API keys are server-side only and travel in headers**, never in a query
   string where they would land in a proxy log or a browser history.
 - **Errors are generic to the client.** Validation issues are returned in full
-  because they describe the caller's own request; anything unexpected is logged
-  on the server and reported as a plain message.
+  because they describe the caller's own request; anything unexpected, including
+  a model provider's error text, is logged on the server and reported as a
+  plain message.
 - **The demo account is read-only**, so one visitor cannot change what the next
   one sees.
 
@@ -126,12 +144,32 @@ What holds up:
 
 What would not, and what it would take:
 
-- **Rate limiting is in-memory**, so it is per-instance. More than one instance
-  needs a shared store such as Redis.
+- **Rate limits cost one database round trip per check.** Fine at this scale;
+  at much higher traffic a dedicated store such as Redis would take that load
+  off Postgres.
 - **Model calls are uncached.** Identical questions re-ask the provider. Keying
   a cache by scenario hash would be the obvious next step.
 - **The simulation is synchronous.** At a much longer horizon or a much higher
   run count it would need a web worker to keep the UI responsive.
+
+## The assistant
+
+Every message is first classified: a **scenario** (a change to try), a
+**goal seek** (a goal and a date, or "N months sooner"), an **answer** (a
+question about the plan), or **off topic**. The prompt carries today's month and
+each goal's current standing, both computed by the engine, so relative dates
+resolve correctly and answers can quote real figures.
+
+A goal seek is answered by `src/lib/engine/solve.ts`, which works backwards: for
+each lever (optional spending, income, reordering goals, a fixed extra amount)
+it binary-searches for the smallest change whose projection funds the goal in
+time. Levers are searched separately rather than blended, because "earn 3% more
+or trim eating out by 21%" is advice a person can act on. Options are ranked by
+how gentle they are to live with, and a reorder names the delay it causes.
+
+Answers are applied to the sandbox's own controls through
+`src/lib/sandbox/state.ts`, which maps adjustments onto sliders only where the
+meaning is identical, and keeps everything else whole as a removable chip.
 
 ## Things deliberately not built
 
